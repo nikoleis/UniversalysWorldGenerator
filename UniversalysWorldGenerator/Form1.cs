@@ -21,7 +21,7 @@ namespace UniversalysWorldGenerator
         {
             InitializeComponent();
             comboBox1.Items.Clear();
-            comboBox1.Items.AddRange(new string[] { "Height", "Temperature", "Humidity", "Climate" , "Mountain", "Continent" });
+            comboBox1.Items.AddRange(new string[] { "Height", "Temperature", "Humidity", "Climate" , "Mountain", "Continent", "River" });
 
         }
 
@@ -33,9 +33,12 @@ namespace UniversalysWorldGenerator
 
             map.GenerateRegions();
             map.GenerateLandmass();
+            map.CleanLandmass();
             map.GenerateTemperature();
             map.GenerateHumidity();
+            map.PlaceRivers();
             map.GenerateDeposit();
+            map.FlowingRiver();
             //map.GenerateStream();
 
 
@@ -44,6 +47,7 @@ namespace UniversalysWorldGenerator
             map.DrawClimateMap();
             map.DrawTemperatureMap();
             map.DrawHumidityMap();
+            map.DrawRiverMap();
 
             map.DrawMountainMap();
             map.DrawContinentMap();
@@ -112,6 +116,12 @@ namespace UniversalysWorldGenerator
                 }
             if (comboBox1.SelectedIndex == 5)
                 using (var bmpTemp = new Bitmap(Program.filePath + "mapContinent.png"))
+                {
+                    img = new Bitmap(bmpTemp);
+                    pictureBox1.Image = img;
+                }
+            if (comboBox1.SelectedIndex == 6)
+                using (var bmpTemp = new Bitmap(Program.filePath + "mapRiver.png"))
                 {
                     img = new Bitmap(bmpTemp);
                     pictureBox1.Image = img;

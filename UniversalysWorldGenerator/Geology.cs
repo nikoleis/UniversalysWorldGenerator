@@ -128,14 +128,173 @@ namespace UniversalysWorldGenerator
                 case "Crater":
                     Crater();
                     break;
-                default:
-
-                    break;
             }
         }
 
 
+        public Geology (string ore, int amount)
+        {
+            switch (ore)
+            {
+                case "River":
+                    River(amount);
+                    break;
+                case "Flowing salt":
+                    FlowingSalt(amount);
+                    break;
+                case "Flowing metal":
+                    FlowingMetal(amount);
+                    break;
+                case "Flowing rare metal":
+                    FlowingRareMetal(amount);
+                    break;
+                case "Flowing precious metal":
+                    FlowingPreciousMetal(amount);
+                    break;
+                case "Flowing radioactive ore":
+                    FlowingRadioactiveOre(amount);
+                    break;
+                case "Flowing gems":
+                    FlowingGems(amount);
+                    break;
+                case "Flowing reagent":
+                    FlowingReagent(amount);
+                    break;
+                default:
+                    break;
+            }
+        }
+
         #region Rivers
+        public void River(int amount)
+        {
+            // Allows the exploitation of a river's freshwater
+            type = "River";
+            int i = 0;
+            int rand;
+            resources["freshWater"] = amount;
+            for (i = 0; i < amount; i++)
+            {
+                rand = dice.Next(1, 5);
+                if (rand == 1)
+                {
+                    resources["deposit"] += 1;
+                }
+            }
+        }
+
+        public void FlowingSalt(int amount)
+        {
+            // Salt being carried by a river
+            type = "Flowing salt";
+            int i = 0;
+            int rand;
+            for (i = 0; i < amount; i++)
+            {
+                rand = dice.Next(1, 5);
+                if (rand == 1)
+                {
+                    resources["salt"] += 1;
+                }
+            }
+        }
+
+        public void FlowingMetal(int amount)
+        {
+            // Metal being carried by a river
+            type = "Flowing metal";
+            int i = 0;
+            int rand;
+            for (i = 0; i < amount; i++)
+            {
+                rand = dice.Next(1, 5);
+                if (rand == 1)
+                {
+                    resources["metal"] += 1;
+                }
+            }
+        }
+
+        public void FlowingRareMetal(int amount)
+        {
+            // Rare metal being carried by a river
+            type = "Flowing rare metal";
+            int i = 0;
+            int rand;
+            for (i = 0; i < amount; i++)
+            {
+                rand = dice.Next(1, 5);
+                if (rand == 1)
+                {
+                    resources["rareMetal"] += 1;
+                }
+            }
+        }
+
+        public void FlowingPreciousMetal(int amount)
+        {
+            // Precious metal being carried by a river
+            type = "Flowing precious metal";
+            int i = 0;
+            int rand;
+            for (i = 0; i < amount; i++)
+            {
+                rand = dice.Next(1, 5);
+                if (rand == 1)
+                {
+                    resources["preciousMetal"] += 1;
+                }
+            }
+        }
+
+        public void FlowingRadioactiveOre(int amount)
+        {
+            // Radioactive ores being carried by a river
+            type = "Flowing radioactive ore";
+            int i = 0;
+            int rand;
+            for (i = 0; i < amount; i++)
+            {
+                rand = dice.Next(1, 5);
+                if (rand == 1)
+                {
+                    resources["radioactiveOre"] += 1;
+                }
+            }
+        }
+
+        public void FlowingGems(int amount)
+        {
+            // Gems being carried by a river
+            type = "Flowing gems";
+            int i = 0;
+            int rand;
+            for (i = 0; i < amount; i++)
+            {
+                rand = dice.Next(1, 5);
+                if (rand == 1)
+                {
+                    resources["gems"] += 1;
+                }
+            }
+        }
+
+        public void FlowingReagent(int amount)
+        {
+            // Reagent being carried by a river
+            type = "Flowing reagent";
+            int i = 0;
+            int rand;
+            for (i = 0; i < amount; i++)
+            {
+                rand = dice.Next(1, 5);
+                if (rand == 1)
+                {
+                    resources["reagent"] += 1;
+                }
+            }
+        }
+
         public void Canyon()
         {
             // Canyons offers an easy access to alluvial deposits and some good mining prospect. They also tend to have fossils exposed and usually are memorable structures
@@ -317,6 +476,7 @@ namespace UniversalysWorldGenerator
                 }
             }
         }
+
         #endregion
 
         #region ores

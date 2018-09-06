@@ -17,12 +17,12 @@ namespace UniversalysWorldGenerator
      */
     class Stream : Geosphere
     {
-        protected List<int> stream = new List<int>();
+        public List<Region> stream = new List<Region>();
 
 
-        public Stream(int id)
+        public Stream(Region region)
         {
-            stream.Add(id);
+            stream.Add(region);
         }
     }
 }
