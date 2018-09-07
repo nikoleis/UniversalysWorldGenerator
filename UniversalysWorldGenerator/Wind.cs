@@ -6,21 +6,21 @@ using System.Threading.Tasks;
 
 namespace UniversalysWorldGenerator
 {
-    class River : Stream
+    class Wind : Stream
     {
 
-        static int riverID = 0;
+        static int windID = 0;
 
         /// <summary>
-        /// Creating a river sets a minimum flow
+        /// Creating a wind with some basic strength
         /// </summary>
         /// <param name="region"></param>
-        public River(Region region) : base(region)
+        public Wind(Region region) : base(region)
         {
             stream.Add(region);
-            region.waterCurrent = dice.Next(3, 6);
-            region.rivers.Add(this);
-            riverID++;
+            region.waterCurrent = dice.Next(15, 25);
+            region.winds.Add(this);
+            windID++;
         }
 
         /// <summary>
@@ -28,23 +28,23 @@ namespace UniversalysWorldGenerator
         /// </summary>
         /// <param name="region"></param>
         /// <returns></returns>
-        public bool GenerateRiver(Region region)
+        public bool GenerateWind(Region region)
         {
             int rand;
-            
+
             rand = dice.Next(region.humidity / 2, region.humidity * 2) / 100;
-            region.waterCurrent = rand + stream.Last().waterCurrent;
-            
-            if(region.rivers.Count == 0)
+            region.waterCurrent = rand + stream.Last().windFlow;
+
+            if (region.rivers.Count == 0)
             {
-                region.rivers.Add(this);
+                region.winds.Add(this);
                 stream.Add(region);
                 return false;
             }
             else
             {
-                region.rivers.Add(this);
-                AddRiverCurrent(region, stream.Last().waterCurrent);
+                region.winds.Add(this);
+                AddWindFlow(region, stream.Last().windFlow);
                 stream.Add(region);
                 return true;
             }
@@ -55,15 +55,15 @@ namespace UniversalysWorldGenerator
         /// </summary>
         /// <param name="region"></param>
         /// <param name="flow"></param>
-        public void AddRiverCurrent(Region region, int flow)
+        public void AddWindFlow(Region region, int flow)
         {
             bool findRiver = false;
             int i = 0;
-            River mainRiver = region.rivers.First();
+            Wind mainWind = region.winds.First();
 
             while (!findRiver)
             {
-                if(region == mainRiver.stream[i])
+                if (region == mainWind.stream[i])
                 {
                     findRiver = true;
                 }
@@ -73,9 +73,9 @@ namespace UniversalysWorldGenerator
                 }
             }
 
-            while (i < mainRiver.stream.Count)
+            while (i < mainWind.stream.Count)
             {
-                mainRiver.stream[i].waterCurrent += flow;
+                mainWind.stream[i].windFlow += flow;
                 i++;
             }
         }

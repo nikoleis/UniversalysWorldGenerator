@@ -17,7 +17,9 @@ namespace UniversalysWorldGenerator
         public bool isPolar = false, isTropical = false, isTemperate = false, isDesert = false;
         public List<Geology> geology = new List<Geology>();
         public List<River> rivers = new List<River>();
+        public List<Wind> winds = new List<Wind>();
         public int waterCurrent = 0;
+        public int windFlow = 0;
         public Geosphere naturalResource = new Geosphere();
 
         public Region(int x, int y)

@@ -16,6 +16,7 @@ namespace UniversalysWorldGenerator
         Random dice = new Random();
         public List<Region> notTreatedRegions = new List<Region>();
         public List<River> riverList = new List<River>();
+        public List<Wind> windList = new List<Wind>();
         int continentID = 0;
 
 
@@ -451,6 +452,7 @@ namespace UniversalysWorldGenerator
                             region.height = -1;
                         }
                         region.isSea = true;
+                        region.isContinent = false;
                     }
                     else
                     {
@@ -534,6 +536,7 @@ namespace UniversalysWorldGenerator
                                         region.height = -1;
                                     }
                                     region.isSea = true;
+                                    region.isContinent = false;
                                 }
                                 else
                                 {
@@ -575,7 +578,7 @@ namespace UniversalysWorldGenerator
 
             notTreatedRegions.AddRange(regionList);
 
-            while (notTreatedRegions.Count > (REGION / 3))
+            while (notTreatedRegions.Count > (2 * REGION / 5))
             {
                 // Choosing what kind of landmass to build
                 rand = dice.Next(0, 12);
@@ -587,39 +590,39 @@ namespace UniversalysWorldGenerator
                         break;
                     case 1:
                         // Large ocean
-                        CreateLandmass(1, 3000 / RANDOMSTEP);
+                        CreateLandmass(1, 3400 / RANDOMSTEP);
                         break;
                     case 2:
                         // Ocean
-                        CreateLandmass(1, 2500 / RANDOMSTEP);
+                        CreateLandmass(1, 2800 / RANDOMSTEP);
                         break;
                     case 3:
                         // Small Ocean
-                        CreateLandmass(1, 2000 / RANDOMSTEP);
+                        CreateLandmass(1, 2500 / RANDOMSTEP);
                         break;
                     case 4:
                         // Smaller Ocean
-                        CreateLandmass(1, 1600 / RANDOMSTEP);
+                        CreateLandmass(1, 2000 / RANDOMSTEP);
                         break;
                     case 5:
                         // Large Continent
-                        CreateLandmass(2, 2250 / RANDOMSTEP);
+                        CreateLandmass(2, 2000 / RANDOMSTEP);
                         break;
                     case 6:
                         // Continent
-                        CreateLandmass(2, 1800 / RANDOMSTEP);
+                        CreateLandmass(2, 1700 / RANDOMSTEP);
                         break;
                     case 7:
                         // Small Continent
-                        CreateLandmass(2, 1400 / RANDOMSTEP);
+                        CreateLandmass(2, 1500 / RANDOMSTEP);
                         break;
                     case 8:
                         // Little Continent
-                        CreateLandmass(2, 1000 / RANDOMSTEP);
+                        CreateLandmass(2, 1100 / RANDOMSTEP);
                         break;
                     case 9:
                         // Big Hilly
-                        CreateLandmass(3, 1500 / RANDOMSTEP);
+                        CreateLandmass(3, 1250 / RANDOMSTEP);
                         break;
                     case 10:
                         // Small Hilly
@@ -641,15 +644,15 @@ namespace UniversalysWorldGenerator
                 {
                     case 0:
                         // Inner sea
-                        CreateLandmass(5, 800 / RANDOMSTEP);
+                        CreateLandmass(5, 1100 / RANDOMSTEP);
                         break;
                     case 1:
                         // Small inner sea
-                        CreateLandmass(5, 650 / RANDOMSTEP);
+                        CreateLandmass(5, 850 / RANDOMSTEP);
                         break;
                     case 2:
                         // Massive Plains
-                        CreateLandmass(6, 1200 / RANDOMSTEP);
+                        CreateLandmass(6, 1000 / RANDOMSTEP);
                         break;
                     case 3:
                         // Plains
@@ -657,7 +660,7 @@ namespace UniversalysWorldGenerator
                         break;
                     case 4:
                         // Small plains
-                        CreateLandmass(6, 500 / RANDOMSTEP);
+                        CreateLandmass(6, 650 / RANDOMSTEP);
                         break;
                     case 5:
                         // Plateau
@@ -668,7 +671,7 @@ namespace UniversalysWorldGenerator
                         CreateLandmass(7, 400 / RANDOMSTEP);
                         break;
                     case 7:
-                        // High area
+                        // Small hills
                         CreateLandmass(7, 250 / RANDOMSTEP);
                         break;
                     case 8:
@@ -776,11 +779,16 @@ namespace UniversalysWorldGenerator
 
         }
 
+        /// <summary>
+        /// Cleaning the world from many inner oceans
+        /// </summary>
         public void CleanLandmass()
         {
+            int rand;
             foreach (Region region in regionList)
             {
-                if(region.height < 0 && region.IsLandlocked())
+                rand = dice.Next(1, 9);
+                if(region.height < 0 && region.IsLandlocked() && rand != 1)
                 {
                     region.height = 0;
                     region.height = region.MeanHeight();
@@ -908,7 +916,7 @@ namespace UniversalysWorldGenerator
             // Land near water is more humid
             if (region.IsLand())
             {
-                region.humidity = dice.Next(50, 70);
+                region.humidity = dice.Next(32, 50) + dice.Next(1, 10);
                 if (region.IsLandlocked())
                 {
                     region.humidity -= dice.Next(3, 10);
@@ -936,7 +944,7 @@ namespace UniversalysWorldGenerator
             // Islands are more humid by definition too
             if (region.IsLand())
             {
-                region.humidity = dice.Next(50, 65);
+                region.humidity = dice.Next(33, 48) + dice.Next(1, 10);
                 if (region.HasWesternMountain(LONGITUDE))
                 {
                     region.humidity -= dice.Next(12, 20);
@@ -981,7 +989,7 @@ namespace UniversalysWorldGenerator
             // Desert lands that are not coastal are dry, but then follows the same ideas as temperate area, just less pronouced
             if (region.IsLand())
             {
-                region.humidity = dice.Next(50, 60);
+                region.humidity = dice.Next(38, 48) + dice.Next(1, 10);
                 if (region.HasWesternMountain(LONGITUDE))
                 {
                     region.humidity -= dice.Next(10, 16);
@@ -1028,7 +1036,7 @@ namespace UniversalysWorldGenerator
             }
             if (region.IsLand())
             {
-                region.humidity = dice.Next(60, 75);
+                region.humidity = dice.Next(40, 55) + dice.Next(1,10);
                 if (region.HasWesternMountain(LONGITUDE))
                 {
                     region.humidity += dice.Next(6, 15);
@@ -1060,6 +1068,9 @@ namespace UniversalysWorldGenerator
 
         #region Currents
 
+        /// <summary>
+        /// Places rivers on the map in specific regions, and starts their propagation
+        /// </summary>
         public void PlaceRivers()
         {
             int rand;
@@ -1067,10 +1078,11 @@ namespace UniversalysWorldGenerator
             River river;
             int numberRiver;
 
-            numberRiver = dice.Next(REGION / 30, REGION / 22);
+            numberRiver = dice.Next(REGION / 27, REGION / 20);
 
             while (numberRiver != 0)
             {
+                // We're looking for somewhat high altitude regions not located in the polar area and not coastal. Deserts areas are limited to moutains due to hos dry they are
                 do
                 {
                     rand = dice.Next(0, REGION);
@@ -1085,6 +1097,10 @@ namespace UniversalysWorldGenerator
             }
         }
 
+        /// <summary>
+        /// Function to allow a river to flow down toward the sea
+        /// </summary>
+        /// <param name="river"></param>
         public void PropagateRiver(River river)
         {
             Region region = river.stream.First();
@@ -1092,11 +1108,14 @@ namespace UniversalysWorldGenerator
             bool otherRiverReached = false;
             int meanHeight, lowestMeanHeight;
 
+            // We advance the river until we reach the sea level or find another river
             while (region.height > 0 && otherRiverReached == false)
             {
+                // ... And to do so we are looking for the lowest regions neighboring the one we are now, pondered with the general area
                 lowestMeanHeight = 200;
                 foreach (Region neighbor in region.neighbors)
                 {
+                    // We ensure to go down if a neighboring region is under the sea level
                     if (neighbor.IsWater())
                     {
                         meanHeight = neighbor.height - 100;
@@ -1106,11 +1125,13 @@ namespace UniversalysWorldGenerator
                         meanHeight = neighbor.MeanHeight();
                     }
 
+                    // Even if those regions are higher naturally, we want to ensure we avoid hilly and moutaneous regions if we can
                     if (neighbor.isHilly || neighbor.isMountainRange)
                     {
                         meanHeight += 15;
                     }
 
+                    //Adding a little random element here to potentially have a plain have two concurrent rivers on a couple regions
                     meanHeight += dice.Next(0, 16);
 
                     if (meanHeight < lowestMeanHeight && !river.stream.Contains(neighbor))
@@ -1120,6 +1141,8 @@ namespace UniversalysWorldGenerator
                     }
                 }
 
+                // And we fill the region, testing if we join a second river or not. If we find that this river is nothing else than itself, we build an inner sea region. In any case
+                // erosion will do its workdigging slightly a valley and increase the local humidity somewhat
                 otherRiverReached = river.GenerateRiver(nextRegion);
                 if (!otherRiverReached)
                 {
@@ -1135,9 +1158,26 @@ namespace UniversalysWorldGenerator
                         region.height = 1;
                     }
                 }
+                // In case the river loops back on itself, create the sea
+                else
+                {
+                    if (river.stream[river.stream.Count-1] == river.stream[river.stream.Count - 3])
+                    {
+                        region.height = dice.Next(1, 8) + dice.Next(1, 4) - 12;
+                        region.isContinent = false;
+                        region.isHilly = false;
+                        region.isMountainRange = false;
+                        region.isLargeIsland = false;
+                        region.isSmallIsland = false;
+                        region.isSea = true;
+                    }
+                }
             }
         }
 
+        /// <summary>
+        /// Create deposits along rivers
+        /// </summary>
         public void FlowingRiver()
         {
             int i, j = riverList.Count - 1;
@@ -1148,10 +1188,12 @@ namespace UniversalysWorldGenerator
                 i = 0;
                 while (i < river.stream.Count)
                 {
+                    // We make sure that every region sans the last one gets the water corresponding to the river size
                     if (i < river.stream.Count - 1)
                     {
                         river.stream[i].geology.Add(new Geology("River", river.stream[i].waterCurrent));
                     }
+                    // Minerals are carried over from neighboring regions, making these possible to exploit even outside of hills
                     if (i > 0)
                     {
                         if (river.stream[i - 1].naturalResource.resources["salt"] > 0)
@@ -1187,24 +1229,32 @@ namespace UniversalysWorldGenerator
                 }
                 j--;
             }
-            foreach (Region region in regionList)
-            {
+        }
 
-                foreach (var geology in region.geology)
+
+        public void PlaceWinds()
+        {
+            int rand;
+            Region region;
+            Wind wind;
+            int numberWind;
+
+            numberWind = dice.Next(REGION / 34, REGION / 26);
+
+            while (numberWind != 0)
+            {
+                // We're looking for somewhat high altitude regions not located in the polar area and not coastal. Deserts areas are limited to moutains due to hos dry they are
+                do
                 {
-                    foreach (string res in geology.resources.Keys)
-                    {
-                        foreach (string key in region.naturalResource.resources.Keys)
-                        {
-                            if (key == res && geology.resources[res] != 0)
-                            {
-                                region.naturalResource.resources[key] += geology.resources[res];
-                                goto EndDictionaryLoop;
-                            }
-                        }
-                    EndDictionaryLoop:;
-                    }
-                }
+                    rand = dice.Next(0, REGION);
+                    region = regionList[rand];
+                } while (!(region.isPolar || region.isTropical));
+
+                wind = new Wind(region);
+                windList.Add(wind);
+                //PropagateRiver(wind);
+
+                numberWind--;
             }
         }
 
@@ -1622,12 +1672,45 @@ namespace UniversalysWorldGenerator
 
             }
 
-            
+
         }
 
         #endregion
 
         #region Display
+
+        /// <summary>
+        /// A function made so we only update the 
+        /// </summary>
+        public void UpdateGeology()
+        {
+            foreach (Region region in regionList)
+            {
+
+                foreach (var geology in region.geology)
+                {
+                    foreach (string res in geology.resources.Keys)
+                    {
+                        foreach (string key in region.naturalResource.resources.Keys)
+                        {
+                            if (key == res && geology.resources[res] != 0)
+                            {
+                                region.naturalResource.resources[key] += geology.resources[res];
+                                goto EndDictionaryLoop;
+                            }
+                        }
+                    EndDictionaryLoop:;
+                    }
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Fills the info box when clicking on a region
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="y"></param>
+        /// <returns></returns>
         public string RegionInfo(int x, int y)
         {
             string result = "";
@@ -1674,7 +1757,7 @@ namespace UniversalysWorldGenerator
             }
             if (regionList[IDregion].isSmallIsland)
             {
-                result += "Continent : " + regionList[IDregion].isSmallIsland.ToString() + Environment.NewLine;
+                result += "Small island : " + regionList[IDregion].isSmallIsland.ToString() + Environment.NewLine;
             }
 
             if (regionList[IDregion].isPolar)
@@ -1704,7 +1787,10 @@ namespace UniversalysWorldGenerator
             #endregion
             foreach (var item in regionList[IDregion].naturalResource.resources)
             {
-                result += item.Key + " : " + item.Value + Environment.NewLine;
+                if(item.Value > 0)
+                {
+                    result += item.Key + " : " + item.Value + Environment.NewLine;
+                }
             }
 
             return result;
@@ -1750,6 +1836,9 @@ namespace UniversalysWorldGenerator
             mapPaint.Save(Program.filePath + "map.png");
         }
 
+        /// <summary>
+        /// Draws the general altitude of a region, white is higher
+        /// </summary>
         public void DrawHeightMap()
         {
             int i = 0, j = 0, colorRed = 0, colorGreen = 0, colorBlue = 0;
@@ -1780,6 +1869,9 @@ namespace UniversalysWorldGenerator
             mapPaint.Save(Program.filePath + "mapHeight.png");
         }
 
+        /// <summary>
+        /// Temperature gradient, with red being hot and blue being cold
+        /// </summary>
         public void DrawTemperatureMap()
         {
             int i = 0, j = 0, colorRed = 0, colorGreen = 0, colorBlue = 0;
@@ -1803,6 +1895,9 @@ namespace UniversalysWorldGenerator
             mapPaint.Save(Program.filePath + "mapTemperature.png");
         }
 
+        /// <summary>
+        /// Draws the humidity, the greener the more humid
+        /// </summary>
         public void DrawHumidityMap()
         {
             int i = 0, j = 0, colorRed = 0, colorGreen = 0, colorBlue = 0;
@@ -1825,6 +1920,9 @@ namespace UniversalysWorldGenerator
             mapPaint.Save(Program.filePath + "mapHumidity.png");
         }
 
+        /// <summary>
+        /// Shows where mountains and hills are present
+        /// </summary>
         public void DrawMountainMap()
         {
             int i = 0, j = 0, colorRed = 0, colorGreen = 0, colorBlue = 0;
@@ -1873,6 +1971,9 @@ namespace UniversalysWorldGenerator
             mapPaint.Save(Program.filePath + "mapMountain.png");
         }
 
+        /// <summary>
+        /// Presents the regions filled with a river
+        /// </summary>
         public void DrawRiverMap()
         {
             int i = 0, j = 0, colorRed = 0, colorGreen = 0, colorBlue = 0;
@@ -1915,6 +2016,9 @@ namespace UniversalysWorldGenerator
             mapPaint.Save(Program.filePath + "mapRiver.png");
         }
 
+        /// <summary>
+        /// Shows the regions generated by the landmass creation
+        /// </summary>
         public void DrawContinentMap()
         {
             int i = 0, j = 0, colorRed = 0, colorGreen = 0, colorBlue = 0;
@@ -1939,6 +2043,9 @@ namespace UniversalysWorldGenerator
             mapPaint.Save(Program.filePath + "mapContinent.png");
         }
 
+        /// <summary>
+        /// A map combining height and temperature
+        /// </summary>
         public void DrawClimateMap()
         {
             int i = 0, j = 0, colorRed = 0, colorGreen = 0, colorBlue = 0;

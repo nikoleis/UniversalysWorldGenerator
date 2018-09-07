@@ -39,7 +39,7 @@ namespace UniversalysWorldGenerator
             map.PlaceRivers();
             map.GenerateDeposit();
             map.FlowingRiver();
-            //map.GenerateStream();
+            map.UpdateGeology();
 
 
             map.DrawRegionMap();
