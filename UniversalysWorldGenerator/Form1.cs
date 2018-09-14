@@ -14,20 +14,21 @@ namespace UniversalysWorldGenerator
     public partial class Form1 : Form
     {
 
-        
+
         WorldMap map = new WorldMap();
+        bool mapLoaded = false;
 
         public Form1()
         {
             InitializeComponent();
             comboBox1.Items.Clear();
-            comboBox1.Items.AddRange(new string[] { "Height", "Temperature", "Humidity", "Climate" , "Mountain", "Continent", "River" });
+            comboBox1.Items.AddRange(new string[] { "Height", "Temperature", "Humidity", "Climate", "Mountain", "Continent", "Rivers", "Winds" });
 
         }
 
         private void TestButton_Click(object sender, EventArgs e)
         {
-
+            mapLoaded = true;
             InformationDisplay.Text = "";
 
 
@@ -37,6 +38,7 @@ namespace UniversalysWorldGenerator
             map.GenerateTemperature();
             map.GenerateHumidity();
             map.PlaceRivers();
+            map.PlaceWinds();
             map.GenerateDeposit();
             map.FlowingRiver();
             map.UpdateGeology();
@@ -48,6 +50,7 @@ namespace UniversalysWorldGenerator
             map.DrawTemperatureMap();
             map.DrawHumidityMap();
             map.DrawRiverMap();
+            map.DrawWindMap();
 
             map.DrawMountainMap();
             map.DrawContinentMap();
@@ -67,12 +70,16 @@ namespace UniversalysWorldGenerator
 
         private void pictureBox1_Click(object sender, EventArgs e)
         {
-            var relativePoint = this.PointToClient(Cursor.Position);
-            InformationDisplay.Text += "{X = " + relativePoint.X + " : Y = " + relativePoint.Y + "}" + Environment.NewLine;
-            InformationDisplay.Text += map.RegionInfo(relativePoint.X, relativePoint.Y);
-            InformationDisplay.Text += Environment.NewLine;
-            InformationDisplay.SelectionStart = InformationDisplay.Text.Length;
-            InformationDisplay.ScrollToCaret();
+            if (mapLoaded)
+            {
+                var relativePoint = PointToClient(Cursor.Position);
+                InformationDisplay.Text += "{X = " + relativePoint.X + " : Y = " + relativePoint.Y + "}" + Environment.NewLine;
+                InformationDisplay.Text += map.RegionInfo(relativePoint.X, relativePoint.Y);
+                InformationDisplay.Text += Environment.NewLine;
+                InformationDisplay.SelectionStart = InformationDisplay.Text.Length;
+                InformationDisplay.ScrollToCaret();
+
+            }
 
         }
 
@@ -122,6 +129,12 @@ namespace UniversalysWorldGenerator
                 }
             if (comboBox1.SelectedIndex == 6)
                 using (var bmpTemp = new Bitmap(Program.filePath + "mapRiver.png"))
+                {
+                    img = new Bitmap(bmpTemp);
+                    pictureBox1.Image = img;
+                }
+            if (comboBox1.SelectedIndex == 7)
+                using (var bmpTemp = new Bitmap(Program.filePath + "mapWind.png"))
                 {
                     img = new Bitmap(bmpTemp);
                     pictureBox1.Image = img;

@@ -19,14 +19,7 @@ namespace UniversalysWorldGenerator
         public List<River> rivers = new List<River>();
         public List<Wind> winds = new List<Wind>();
         public int waterCurrent = 0;
-        public int windFlow = 0;
         public Geosphere naturalResource = new Geosphere();
-
-        public Region(int x, int y)
-        {
-            X = x;
-            Y = y;            
-        }
 
         public Region(int x, int y, int id)
         {
@@ -60,6 +53,22 @@ namespace UniversalysWorldGenerator
             return true;
         }
 
+        int CalculateX(int regionXToCorrect, int regionXToCompare, int LONGITUDE)
+        {
+            int correctedX = regionXToCorrect;
+
+            if ((regionXToCompare < LONGITUDE / 5) && (regionXToCorrect > 4 * LONGITUDE / 5))
+            {
+                correctedX -= LONGITUDE;
+            }
+            else if ((regionXToCompare > 4 * LONGITUDE / 5) && (regionXToCorrect < LONGITUDE / 5))
+            {
+                correctedX += LONGITUDE;
+            }
+
+            return correctedX;
+        }
+
         public bool HasWesternMountain(int LONGITUDE)
         {
 
@@ -70,18 +79,7 @@ namespace UniversalysWorldGenerator
                 
                 while(i < neighbors.Count)
                 {
-                    if((X < LONGITUDE / 5) && (neighbors[i].X > 4 * LONGITUDE / 5))
-                    {
-                        correctedX = neighbors[i].X - LONGITUDE;
-                    }
-                    else if ((X > 4 * LONGITUDE / 5) && (neighbors[i].X < LONGITUDE / 5))
-                    {
-                        correctedX = neighbors[i].X + LONGITUDE;
-                    }
-                    else
-                    {
-                        correctedX = neighbors[i].X;
-                    }
+                    correctedX = CalculateX(neighbors[i].X, X, LONGITUDE);
                     if(correctedX < X && neighbors[i].isMountainRange)
                     {
                         return true;
@@ -102,18 +100,7 @@ namespace UniversalysWorldGenerator
 
                 while (i < neighbors.Count)
                 {
-                    if ((X < LONGITUDE / 5) && (neighbors[i].X > 4 * LONGITUDE / 5))
-                    {
-                        correctedX = neighbors[i].X - LONGITUDE;
-                    }
-                    else if ((X > 4 * LONGITUDE / 5) && (neighbors[i].X < LONGITUDE / 5))
-                    {
-                        correctedX = neighbors[i].X + LONGITUDE;
-                    }
-                    else
-                    {
-                        correctedX = neighbors[i].X;
-                    }
+                    correctedX = CalculateX(neighbors[i].X, X, LONGITUDE);
                     if (correctedX > X && neighbors[i].isMountainRange)
                     {
                         return true;
@@ -134,18 +121,7 @@ namespace UniversalysWorldGenerator
 
                 while (i < neighbors.Count)
                 {
-                    if ((X < LONGITUDE / 5) && (neighbors[i].X > 4 * LONGITUDE / 5))
-                    {
-                        correctedX = neighbors[i].X - LONGITUDE;
-                    }
-                    else if ((X > 4 * LONGITUDE / 5) && (neighbors[i].X < LONGITUDE / 5))
-                    {
-                        correctedX = neighbors[i].X + LONGITUDE;
-                    }
-                    else
-                    {
-                        correctedX = neighbors[i].X;
-                    }
+                    correctedX = CalculateX(neighbors[i].X, X, LONGITUDE);
                     if (correctedX < X && neighbors[i].IsWater())
                     {
                         return true;
@@ -166,18 +142,7 @@ namespace UniversalysWorldGenerator
 
                 while (i < neighbors.Count)
                 {
-                    if ((X < LONGITUDE / 5) && (neighbors[i].X > 4 * LONGITUDE / 5))
-                    {
-                        correctedX = neighbors[i].X - LONGITUDE;
-                    }
-                    else if ((X > 4 * LONGITUDE / 5) && (neighbors[i].X < LONGITUDE / 5))
-                    {
-                        correctedX = neighbors[i].X + LONGITUDE;
-                    }
-                    else
-                    {
-                        correctedX = neighbors[i].X;
-                    }
+                    correctedX = CalculateX(neighbors[i].X, X, LONGITUDE);
                     if (correctedX > X && neighbors[i].IsWater())
                     {
                         return true;
@@ -200,6 +165,8 @@ namespace UniversalysWorldGenerator
 
             return (height + (neighborHeight / neighbors.Count)) / 2;
         }
+
+ 
 
     }
 }
