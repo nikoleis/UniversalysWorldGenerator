@@ -19,8 +19,7 @@ namespace UniversalysWorldGenerator
         /// <param name="region"></param>
         public Wind(Region region, bool cold, bool north) : base(region)
         {
-            stream.Add(region);
-            region.waterCurrent = dice.Next(15, 25);
+            //stream.Add(region);
             coldWind = cold;
             northern = north;
             region.winds.Add(this);

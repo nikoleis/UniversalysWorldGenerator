@@ -9,7 +9,7 @@ namespace UniversalysWorldGenerator
     static class Program
     {
 
-        public static string filePath = @"C:\Users\34011-10-02\Documents\UniversalysWorldGenerator\UniversalysWorldGenerator\map\";
+        public static string filePath = @"C:\Users\" + Environment.UserName + @"\Documents\Universalys\maps\";
         /// <summary>
         /// Point d'entrée principal de l'application.
         /// </summary>

@@ -3,26 +3,33 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Windows.Input;
-using System.IO;
+
 namespace UniversalysWorldGenerator
 {
     public partial class Form1 : Form
     {
 
-
+        static Image img;
         WorldMap map = new WorldMap();
         bool mapLoaded = false;
+        int generationStep = 0;
 
         public Form1()
         {
             InitializeComponent();
             comboBox1.Items.Clear();
-            comboBox1.Items.AddRange(new string[] { "Height", "Temperature", "Humidity", "Climate", "Mountain", "Continent", "Rivers", "Winds" });
+            comboBox1.Items.AddRange(new string[] { "Height", "Temperature", "Humidity", "Climate", "Mountain", "Continent", "Rivers", "Winds", "Water currents" });
+
+            if (!Directory.Exists(Program.filePath))
+            {
+                Directory.CreateDirectory(Program.filePath);
+            }
 
         }
 
@@ -39,6 +46,7 @@ namespace UniversalysWorldGenerator
             map.GenerateHumidity();
             map.PlaceRivers();
             map.PlaceWinds();
+            map.PlaceWaterCurrents();
             map.GenerateDeposit();
             map.FlowingRiver();
             map.UpdateGeology();
@@ -51,14 +59,15 @@ namespace UniversalysWorldGenerator
             map.DrawHumidityMap();
             map.DrawRiverMap();
             map.DrawWindMap();
+            map.DrawWaterCurrentMap();
 
             map.DrawMountainMap();
             map.DrawContinentMap();
 
-            MessageBox.Show("Done !");
+            InformationDisplay.Text += "Done !";
             // Pour ne plus avoir besoin de relancer le générateur a chaque fois
             // To not relaunch the generator every time we need a new map 
-            Image img;
+
 
             using (var bmpTemp = new Bitmap(Program.filePath + "mapHeight.png"))
             {
@@ -87,6 +96,15 @@ namespace UniversalysWorldGenerator
         {
             InformationDisplay.Text = "";
         }
+
+        //public static void LoadMap()
+        //{
+
+        //    var img = Image.FromFile(Program.filePath + "map.png");
+        //    pictureBox1.Image = img;
+
+
+        //}
 
         private void btnLoad_Click(object sender, EventArgs e)
         {
@@ -139,11 +157,79 @@ namespace UniversalysWorldGenerator
                     img = new Bitmap(bmpTemp);
                     pictureBox1.Image = img;
                 }
+            if (comboBox1.SelectedIndex == 8)
+                using (var bmpTemp = new Bitmap(Program.filePath + "mapWaterCurrent.png"))
+                {
+                    img = new Bitmap(bmpTemp);
+                    pictureBox1.Image = img;
+                }
         }
 
         private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
         {
 
+        }
+
+        private void btnStep_Click(object sender, EventArgs e)
+        {
+            mapLoaded = true;
+            InformationDisplay.Text = "";
+
+            switch (generationStep)
+            {
+                case 0:
+                    map.GenerateRegions();
+                    map.DrawRegionMap();
+                    generationStep++;
+                    btnStep.Text = "Create landmass";
+                    break;
+                case 1:
+                    map.GenerateLandmass();
+                    map.CleanLandmass();
+                    map.DrawHeightMap();
+                    map.DrawContinentMap();
+                    map.DrawMountainMap();
+                    generationStep++;
+                    btnStep.Text = "Set temperature";
+                    break;
+                case 2:
+                    map.GenerateTemperature();
+                    map.DrawTemperatureMap();
+                    generationStep++;
+                    btnStep.Text = "Set humidity";
+                    break;
+                case 3:
+                    map.GenerateHumidity();
+                    map.DrawHumidityMap();
+                    generationStep++;
+                    btnStep.Text = "Create flows";
+                    break;
+                case 4:
+                    map.PlaceRivers();
+                    map.PlaceWinds();
+                    map.DrawHeightMap();
+                    map.DrawTemperatureMap();
+                    map.DrawClimateMap();
+                    map.DrawHumidityMap();
+                    generationStep++;
+                    btnStep.Text = "Set geology";
+                    break;
+                case 5:
+                    map.GenerateDeposit();
+                    map.FlowingRiver();
+                    map.UpdateGeology();
+                    map.DrawRiverMap();
+                    map.DrawWindMap();
+                    generationStep = 100;
+                    btnStep.Text = "Settle plants";
+                    break;
+                case 100:
+                    MessageBox.Show("Not yet implemented");
+                    break;
+                default:
+                    break;
+
+            }
         }
     }
 }

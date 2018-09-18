@@ -34,6 +34,7 @@
             this.btnClear = new System.Windows.Forms.Button();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.btnLoad = new System.Windows.Forms.Button();
+            this.btnStep = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
             this.SuspendLayout();
             // 
@@ -98,11 +99,22 @@
             this.btnLoad.UseVisualStyleBackColor = true;
             this.btnLoad.Click += new System.EventHandler(this.btnLoad_Click);
             // 
+            // btnStep
+            // 
+            this.btnStep.Location = new System.Drawing.Point(127, 803);
+            this.btnStep.Name = "btnStep";
+            this.btnStep.Size = new System.Drawing.Size(132, 28);
+            this.btnStep.TabIndex = 6;
+            this.btnStep.Text = "Step by step";
+            this.btnStep.UseVisualStyleBackColor = true;
+            this.btnStep.Click += new System.EventHandler(this.btnStep_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1530, 838);
+            this.Controls.Add(this.btnStep);
             this.Controls.Add(this.btnLoad);
             this.Controls.Add(this.comboBox1);
             this.Controls.Add(this.btnClear);
@@ -118,13 +130,13 @@
         }
 
         #endregion
-
-        private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.Button TestButton;
         private System.Windows.Forms.RichTextBox InformationDisplay;
         private System.Windows.Forms.Button btnClear;
         private System.Windows.Forms.ComboBox comboBox1;
         private System.Windows.Forms.Button btnLoad;
+        private System.Windows.Forms.Button btnStep;
+        public System.Windows.Forms.PictureBox pictureBox1;
     }
 }
 

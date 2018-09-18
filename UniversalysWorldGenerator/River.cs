@@ -17,8 +17,8 @@ namespace UniversalysWorldGenerator
         /// <param name="region"></param>
         public River(Region region) : base(region)
         {
-            stream.Add(region);
-            region.waterCurrent = dice.Next(3, 6);
+            //stream.Add(region);
+            region.riverStream = dice.Next(3, 6);
             region.rivers.Add(this);
             riverID++;
         }
@@ -33,7 +33,7 @@ namespace UniversalysWorldGenerator
             int rand;
             
             rand = dice.Next(region.humidity / 2, region.humidity * 2) / 100;
-            region.waterCurrent = rand + stream.Last().waterCurrent;
+            region.riverStream = rand + stream.Last().riverStream;
             
             if(region.rivers.Count == 0)
             {
@@ -44,7 +44,7 @@ namespace UniversalysWorldGenerator
             else
             {
                 region.rivers.Add(this);
-                AddRiverCurrent(region, stream.Last().waterCurrent);
+                AddRiverCurrent(region, stream.Last().riverStream);
                 stream.Add(region);
                 return true;
             }
@@ -75,7 +75,7 @@ namespace UniversalysWorldGenerator
 
             while (i < mainRiver.stream.Count)
             {
-                mainRiver.stream[i].waterCurrent += flow;
+                mainRiver.stream[i].riverStream += flow;
                 i++;
             }
         }

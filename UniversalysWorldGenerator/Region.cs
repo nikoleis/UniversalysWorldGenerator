@@ -12,13 +12,17 @@ namespace UniversalysWorldGenerator
         public int X, Y, ID;
         public int height = 0, temperature = 0, humidity = 0;
         public int continentID;
+        public int pixelSize = 1;
         public List<Region> neighbors = new List<Region>();
-        public bool isMountainRange = false, isOcean = false, isContinent = false, isHilly = false, isSea = false, isLargeIsland = false, isOceanTrench = false, isSmallIsland = false;
+        public bool isMountain = false, isValley = false, isHilly = false, isVolcano;
+        public bool isSea = false, isOceanTrench = false, isOcean = false;
+        public bool isContinent = false, isLargeIsland = false, isSmallIsland = false;
         public bool isPolar = false, isTropical = false, isTemperate = false, isDesert = false;
         public List<Geology> geology = new List<Geology>();
         public List<River> rivers = new List<River>();
         public List<Wind> winds = new List<Wind>();
-        public int waterCurrent = 0;
+        public List<WaterCurrent> waterCurrents = new List<WaterCurrent>();
+        public int riverStream = 0;
         public Geosphere naturalResource = new Geosphere();
 
         public Region(int x, int y, int id)
@@ -53,23 +57,23 @@ namespace UniversalysWorldGenerator
             return true;
         }
 
-        int CalculateX(int regionXToCorrect, int regionXToCompare, int LONGITUDE)
+        int CalculateX(int regionXToCorrect, int regionXToCompare)
         {
             int correctedX = regionXToCorrect;
 
-            if ((regionXToCompare < LONGITUDE / 5) && (regionXToCorrect > 4 * LONGITUDE / 5))
+            if ((regionXToCompare < WorldMap.LONGITUDE / 5) && (regionXToCorrect > 4 * WorldMap.LONGITUDE / 5))
             {
-                correctedX -= LONGITUDE;
+                correctedX -= WorldMap.LONGITUDE;
             }
-            else if ((regionXToCompare > 4 * LONGITUDE / 5) && (regionXToCorrect < LONGITUDE / 5))
+            else if ((regionXToCompare > 4 * WorldMap.LONGITUDE / 5) && (regionXToCorrect < WorldMap.LONGITUDE / 5))
             {
-                correctedX += LONGITUDE;
+                correctedX += WorldMap.LONGITUDE;
             }
 
             return correctedX;
         }
 
-        public bool HasWesternMountain(int LONGITUDE)
+        public bool HasWesternMountain()
         {
 
             foreach (Region neighbor in neighbors)
@@ -79,8 +83,8 @@ namespace UniversalysWorldGenerator
                 
                 while(i < neighbors.Count)
                 {
-                    correctedX = CalculateX(neighbors[i].X, X, LONGITUDE);
-                    if(correctedX < X && neighbors[i].isMountainRange)
+                    correctedX = CalculateX(neighbors[i].X, X);
+                    if(correctedX < X && neighbors[i].isMountain)
                     {
                         return true;
                     }
@@ -90,7 +94,7 @@ namespace UniversalysWorldGenerator
             return false;
         }
 
-        public bool HasEasternMountain(int LONGITUDE)
+        public bool HasEasternMountain()
         {
 
             foreach (Region neighbor in neighbors)
@@ -100,8 +104,8 @@ namespace UniversalysWorldGenerator
 
                 while (i < neighbors.Count)
                 {
-                    correctedX = CalculateX(neighbors[i].X, X, LONGITUDE);
-                    if (correctedX > X && neighbors[i].isMountainRange)
+                    correctedX = CalculateX(neighbors[i].X, X);
+                    if (correctedX > X && neighbors[i].isMountain)
                     {
                         return true;
                     }
@@ -111,7 +115,7 @@ namespace UniversalysWorldGenerator
             return false;
         }
 
-        public bool HasWesternWater(int LONGITUDE)
+        public bool HasWesternWater()
         {
 
             foreach (Region neighbor in neighbors)
@@ -121,7 +125,7 @@ namespace UniversalysWorldGenerator
 
                 while (i < neighbors.Count)
                 {
-                    correctedX = CalculateX(neighbors[i].X, X, LONGITUDE);
+                    correctedX = CalculateX(neighbors[i].X, X);
                     if (correctedX < X && neighbors[i].IsWater())
                     {
                         return true;
@@ -132,7 +136,7 @@ namespace UniversalysWorldGenerator
             return false;
         }
 
-        public bool HasEasternWater(int LONGITUDE)
+        public bool HasEasternWater()
         {
 
             foreach (Region neighbor in neighbors)
@@ -142,7 +146,7 @@ namespace UniversalysWorldGenerator
 
                 while (i < neighbors.Count)
                 {
-                    correctedX = CalculateX(neighbors[i].X, X, LONGITUDE);
+                    correctedX = CalculateX(neighbors[i].X, X);
                     if (correctedX > X && neighbors[i].IsWater())
                     {
                         return true;
@@ -151,6 +155,58 @@ namespace UniversalysWorldGenerator
                 }
             }
             return false;
+        }
+
+        public bool IsEastFrom(Region region)
+        {
+            int correctedX = CalculateX(region.X, X);
+
+            if (correctedX < X)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool IsWestFrom(Region region)
+        {
+            int correctedX = CalculateX(region.X, X);
+
+            if (correctedX > X)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool IsNorthFrom(Region region)
+        {
+            if (region.Y < Y)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        public bool IsSouthFrom(Region region)
+        {
+            if (region.Y < Y)
+            {
+                return true;
+            }
+            else
+            {
+                return false;
+            }
         }
 
         public int MeanHeight()
