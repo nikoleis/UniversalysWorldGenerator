@@ -8,7 +8,8 @@ namespace UniversalysWorldGenerator
 {
     class WorldMap
     {
-        public static int LATITUDE = 800, LONGITUDE = 1200, REGION = 3000, RANDOMSTEP = 4;
+        public static int LATITUDE = 800, LONGITUDE = 1200, REGION = 7000, MASS = 32;
+        public static int OCEAN, SEA, ISLAND, VALLEY, COASTMOUNTAIN, MOUNTAIN;
         public Bitmap mapPaint = new Bitmap(LONGITUDE, LATITUDE);
         // TODO : STOCK MAPMASK IN DATABASE
         public int[,] mapMask = new int[LONGITUDE, LATITUDE];
@@ -18,7 +19,7 @@ namespace UniversalysWorldGenerator
         public List<River> riverList = new List<River>();
         public List<Wind> windList = new List<Wind>();
         public List<WaterCurrent> waterCurrentList = new List<WaterCurrent>();
-        int continentID = 0;
+        int generationOrder = 0;
 
         public WorldMap()
         {
@@ -57,7 +58,7 @@ namespace UniversalysWorldGenerator
                 // These two conditions are testing to get more region in the center band, to compensate for map distorsion due to the flat representation.
                 // It is very basic and only skew probabilities, not force these out
                 current.X = dice.Next(0, LONGITUDE);
-                current.Y = dice.Next(((2 * i / REGION) * LATITUDE) / 5, LATITUDE - ((2 * i / REGION) * LATITUDE) / 5);
+                current.Y = dice.Next(((i / REGION) * LATITUDE) / 5, LATITUDE - ((i / REGION) * LATITUDE) / 5);
 
                 // Filling the map with the various starting points. The neighbor points are also locked out to allow for some minimal distance between points.
                 // Note that if a point lands on a blocked area, it won't generate a region, which allows to slightly vary their final number from map to map
@@ -367,239 +368,15 @@ namespace UniversalysWorldGenerator
         #region Height
 
         /// <summary>
-        /// Main function for generating the landmass
+        /// Generates a valley, with access to sea and hills
         /// </summary>
-        /// <param name="type"></param>
-        /// <param name="size"></param>
-        public void CreateLandmass(int type, int size)
+        /// <param name="region"></param>
+        /// <returns></returns>
+        public int CreateValley(Region region)
         {
-
-            Region region;
-            List<Region> neighbors;
-            Region currentRegion;
-
-            int i, rand;
-            List<Region> treatedEmptyRegions = new List<Region>();
-            int startingSize = size;
-
-            // 1) Choose the center to spread from
-            rand = dice.Next(0, notTreatedRegions.Count);
-            currentRegion = notTreatedRegions[rand];
-            region = regionList[currentRegion.ID];
-            /* 
-             * 1 : Ocean
-             * 2 : Continent
-             * 3 : Hill
-             * 4 : Archipelago 
-             * J'ai ajouté l'assignation à chaque région. Maintenant les régions seront accessibles grâce à leur appartenance. On peut désigner tous les continents par exemple est augmenter leur température. 
-             * Je pense que nous devrions revoir le fait de créer des collines comme ça car il y a des collines en plein milieu de l'océan. ou alors les remplacer par des îles?
-             * I added assignment to each region. Now we can access to every regions by there belonging. by example we can designate every continents and increase their temperatures.
-             * I think we should revise the fact that we create hills because they are generated right in the middle of the oceans, or maybe replace their names by island?
-            */
-            // Added: 5 for inner seas, 6 for plains, 7 for plateau and 8 for island chains
-            switch (type)
-            {
-                // Those are oceans, with deep water abound
-                case 1:
-                    region.height = dice.Next(0, 10) + dice.Next(0, 10) - 85;
-                    region.isOcean = true;
-                    if (region.height < -80)
-                    {
-                        region.isOceanTrench = true;
-                    }
-                    region.continentID = continentID;
-                    break;
-                // Those are continental masses, these tends to keep at a low altitude. For now
-                case 2:
-                    region.height = dice.Next(0, 5) + dice.Next(0, 16) + 5;
-                    region.isContinent = true;
-                    region.continentID = continentID;
-                    break;
-                // Those are "shield" type terrains that grows more upward than most continents, represents highlands, mesas and other former volcanic structures 
-                case 3:
-                    region.height = dice.Next(0, 24) + dice.Next(0, 8) + 12;
-                    region.isHilly = true;
-                    //Si une région est collé a un continent alors elle appartient à ce continent 
-                    //If a region is neighbors with a continent so she belong to this.
-                    foreach (Region item in region.neighbors)
-                    {
-                        if (item.isContinent)
-                        {
-                            region.isContinent = true;
-                            goto ContinentDetect;
-                        }
-                    }
-                    ContinentDetect:
-                    region.continentID = continentID;
-                    break;
-                // Those are archipelagoes. It designate areas with a higher sea level surrounded by small landmasses. Examples includes all of South East Asia, the North sea, the Carribeans...
-                case 4:
-                    region.height = dice.Next(0, 40) + dice.Next(0, 15) - 60;
-                    region.isLargeIsland = true;
-                    if (region.height < 0)
-                    {
-                        region.isLargeIsland = false;
-                        region.isSea = true;
-                    }
-                    region.continentID = continentID;
-                    break;
-                // Small seas with a slightly lower level than archipelago
-                case 5:
-                    region.height = dice.Next(0, 10) + dice.Next(0, 10) - 35;
-                    region.isSea = true;
-
-                    region.continentID = continentID;
-                    break;
-                // Plains, with a lower level than most areas, perfect for rivers to flow into
-                case 6:
-                    region.height = dice.Next(0, 7) + dice.Next(0, 8) + 2;
-                    region.isContinent = true;
-
-                    region.continentID = continentID;
-                    break;
-                // Highlands standing alone in some areas
-                case 7:
-                    region.height = dice.Next(0, 14) + dice.Next(0, 10) + 22;
-                    region.isContinent = true;
-                    region.isHilly = true;
-                    region.continentID = continentID;
-                    break;
-                // Small islands and shallow seas
-                case 8:
-                    region.height = dice.Next(0, 12) + dice.Next(0, 12);
-                    region.isSmallIsland = true;
-                    if (region.height <= 0)
-                    {
-                        if (region.height == 0)
-                        {
-                            region.height = -1;
-                        }
-                        region.isSea = true;
-                        region.isContinent = false;
-                    }
-                    else
-                    {
-                        region.isLargeIsland = true;
-                    }
-
-                    region.continentID = continentID;
-                    break;
-            }
-            neighbors = new List<Region>(region.neighbors);
-            notTreatedRegions.Remove(currentRegion);
-
-            // 2) Use the neighbors to potentially spread the area type. When reaching the optimal size, the RANDOMSTEP value will ensure some irrgularity to avoid massive blobs
-            while (neighbors.Count > 0 && size >= 0)
-            {
-                rand = dice.Next(0, neighbors.Count * 2) * dice.Next(0, neighbors.Count / 2) / neighbors.Count;
-                currentRegion = neighbors[rand];
-                neighbors.RemoveAt(rand);
-                if (notTreatedRegions.Contains(currentRegion) && !treatedEmptyRegions.Contains(currentRegion))
-                {
-                    region = regionList[currentRegion.ID];
-                    region.continentID = continentID;
-
-                    // When the area remaining to cover lowers, we do not always fill the region to to not create a too uniform structure
-                    if (size > dice.Next(1, 101 + RANDOMSTEP * 2))
-                    {
-                        switch (type)
-                        {
-                            case 1:
-                                // Oceans tends to create deep trenches on the borders
-                                region.height = dice.Next(0, 10) + dice.Next(0, 10) - 85 - (startingSize - size) / (startingSize / 12);
-                                region.isOcean = true;
-                                if (region.height < -70)
-                                {
-                                    region.isOceanTrench = true;
-                                }
-
-                                break;
-                            case 2:
-                                // Continents are overall of an unified, flat land
-                                region.height = dice.Next(0, 5) + dice.Next(0, 16) + 5; ;
-                                region.isContinent = true;
-                                break;
-                            case 3:
-                                // Hilly regions have a slightly higher altitude, and are more random in their distribution
-                                region.height = dice.Next(0, 24) + dice.Next(0, 8) + 12;
-                                region.isHilly = true;
-                                break;
-                            case 4:
-                                // Archipelagoes tends to create small pieces of land on the borders
-                                region.height = dice.Next(0, 40) + dice.Next(0, 15) - 60 + (startingSize - size) / (startingSize / 10);
-                                region.isLargeIsland = true;
-                                if (region.height < 0)
-                                {
-                                    region.isLargeIsland = false;
-                                    region.isSea = true;
-                                }
-                                break;
-                            case 5:
-                                // The smaller seas tends to be a little deeper in the center
-                                region.height = dice.Next(0, 10) + dice.Next(0, 10) - 35 + (startingSize - size) / (startingSize / 10);
-                                region.isSea = true;
-                                break;
-                            case 6:
-                                // Plain are plain and simple as befit for these
-                                region.height = dice.Next(0, 7) + dice.Next(0, 8) + 2;
-                                region.isContinent = true;
-                                break;
-                            case 7:
-                                // Highlands are relatively chaotic, but not as much as real hills
-                                region.height = dice.Next(0, 14) + dice.Next(0, 10) + 22;
-                                region.isContinent = true;
-                                region.isHilly = true;
-                                break;
-                            case 8:
-                                // The small island areas  tends to focus these in the center
-                                region.height = dice.Next(0, 12) + dice.Next(0, 12) - (startingSize - size) / (startingSize / 10);
-                                region.isSmallIsland = true;
-                                if (region.height <= 0)
-                                {
-                                    if (region.height == 0)
-                                    {
-                                        region.height = -1;
-                                    }
-                                    region.isSea = true;
-                                    region.isContinent = false;
-                                }
-                                else
-                                {
-                                    region.isLargeIsland = true;
-                                }
-                                break;
-                        }
-
-                        //We eliminate height = 0 cases here, turning these into water
-                        if (region.height == 0)
-                        {
-                            region.height = -1;
-                            region.isLargeIsland = false;
-                            region.isSea = true;
-                        }
-                        i = 0;
-                        while (i < region.neighbors.Count)
-                        {
-                            neighbors.Add(region.neighbors[i]);
-                            i++;
-                        }
-                        notTreatedRegions.Remove(currentRegion);
-                    }
-                    else
-                    {
-                        treatedEmptyRegions.Add(currentRegion);
-                    }
-                    //A higher RANDOMSTEP allows for smaller regions without changing the global size of a region
-                    size -= RANDOMSTEP;
-
-                }
-            }
-
-        }
-
-        public void CreateValley(Region region)
-        {
-            int size = dice.Next(12 - RANDOMSTEP / 2, 30 - RANDOMSTEP);
+            // Valleys are relatively large structures, around 1.3 time the Mass value in number of regions
+            int size = dice.Next(5 * MASS / 6, 9 * MASS / 6);
+            int regionNumber = 0;
             bool nextToSea = false;
             bool nextToHill = false;
             List<Region> neighborRegions = new List<Region>();
@@ -610,11 +387,11 @@ namespace UniversalysWorldGenerator
             do
             {
                 region.height = dice.Next(1, 5) * dice.Next(1, 4) + dice.Next(1, 6);
-                region.isValley = true;
-                region.continentID = continentID;
+                region.generationOrder = generationOrder;
                 notTreatedRegions.Remove(region);
                 neighborRegions.Remove(region);
                 valley.Add(region);
+                regionNumber++;
                 foreach (Region neighbor in region.neighbors)
                 {
                     if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
@@ -626,17 +403,19 @@ namespace UniversalysWorldGenerator
                 {
                     goto beach;
                 }
+                // We choose to take a semi random region in the list to keep it not entirely random, but a little blobby in shape, while not being a round structure
                 region = neighborRegions[dice.Next(0, neighborRegions.Count / 2)];
+
                 size--;
             } while (size > 0);
 
-            // Place then a sea region as a starting point
+            // Place then a sea region as a starting point for where the sea extends
             region.height = -dice.Next(1, 5) * dice.Next(1, 5) - dice.Next(1, 6);
-            region.isSea = true;
-            region.continentID = continentID;
+            region.generationOrder = generationOrder;
             notTreatedRegions.Remove(region);
             neighborRegions.Remove(region);
             sea.Add(region);
+            regionNumber++;
             foreach (Region neighbor in region.neighbors)
             {
                 if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
@@ -650,17 +429,16 @@ namespace UniversalysWorldGenerator
             }
             region = neighborRegions[dice.Next(0, neighborRegions.Count)];
 
-            // Place two hills region
-
+            // Place two hills regions, made for rivers to appear
             size = 2;
             do
             {
-                region.height = dice.Next(3, 7) * dice.Next(3, 6) + dice.Next(7, 14);
-                region.isHilly = true;
-                region.continentID = continentID;
+                region.height = dice.Next(3, 7) * dice.Next(4, 9) + dice.Next(9, 18);
+                region.generationOrder = generationOrder;
                 notTreatedRegions.Remove(region);
                 neighborRegions.Remove(region);
                 hill.Add(region);
+                regionNumber++;
                 foreach (Region neighbor in region.neighbors)
                 {
                     if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
@@ -672,19 +450,19 @@ namespace UniversalysWorldGenerator
                 {
                     goto beach;
                 }
-                
+
                 size--;
             } while (size > 0);
-            // And now to extend the structure
-            size = dice.Next(24 - RANDOMSTEP / 2, 45 - RANDOMSTEP);
+            // And now to extend the structure on around 1.2 Mass. This leads to the entire structure taking 2.5 Mass
+            size = dice.Next(5 * MASS / 6, 9 * MASS / 6);
             do
             {
                 // Here we test the presence of the sea nearby first, then of hill. If none of those, it is a valley
                 nextToSea = false;
                 nextToHill = false;
-
-                region = neighborRegions[dice.Next(0, neighborRegions.Count / 2)];
-                region.continentID = continentID;
+                // Now we try to keep to a circular extension
+                region = neighborRegions[0];
+                region.generationOrder = generationOrder;
                 foreach (Region lookout in region.neighbors)
                 {
                     if (sea.Contains(lookout))
@@ -699,24 +477,22 @@ namespace UniversalysWorldGenerator
                 // Sea has the priority for extension, then hills, and finally the valley
                 if (nextToSea)
                 {
-                    region.isSea = true;
                     region.height = -dice.Next(1, 5) * dice.Next(1, 5) - dice.Next(1, 6);
                     sea.Add(region);
                 }
                 else if (nextToHill)
                 {
-                    region.isHilly = true;
-                    region.height = dice.Next(3, 7) * dice.Next(3, 6) + dice.Next(7, 14);
+                    region.height = dice.Next(3, 7) * dice.Next(4, 9) + dice.Next(9, 18);
                     hill.Add(region);
                 }
                 else
                 {
-                    region.isValley = true;
                     region.height = dice.Next(1, 5) * dice.Next(1, 4) + dice.Next(1, 6);
                     valley.Add(region);
                 }
                 notTreatedRegions.Remove(region);
                 neighborRegions.Remove(region);
+                // Building the list of neighboring regions as usual to continue the extension
                 foreach (Region neighbor in region.neighbors)
                 {
                     if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
@@ -757,32 +533,42 @@ namespace UniversalysWorldGenerator
                     valleyRegion.height /= 2;
                 }
             }
+            return regionNumber;
         }
 
-        public void CreateOcean(Region region)
+        /// <summary>
+        /// Places an ocean with small islands across it
+        /// </summary>
+        /// <param name="region"></param>
+        public int CreateOcean(Region region)
         {
-            int size = dice.Next(45 - RANDOMSTEP, 120 - RANDOMSTEP * 2);
+            // Oceans are truly massive, set to cover enough space to separate continents, taking around 6-9 Mass worth of regions
+            int size = dice.Next(14 * MASS / 3, 31 * MASS / 3);
+            int regionNumber = 0;
 
             List<Region> neighborRegions = new List<Region>();
             do
             {
-                if (dice.Next(1, 40) == 1)
+                // Low island density in a sea, but those do exist
+                if (dice.Next(1, 151) == 1)
                 {
                     region.height = dice.Next(1, 3) + dice.Next(2, 6);
                     region.isSmallIsland = true;
+                    regionNumber++;
                     if (dice.Next(1, 3) == 1)
                     {
                         region.height += dice.Next(3, 8);
                         region.isVolcano = true;
                     }
                 }
+                // Oceans are deep, this ensure they tend to bring the surrounding terrain under sea level
                 else
                 {
                     region.height = -dice.Next(40, 60) - dice.Next(1, 8) - dice.Next(1, 6);
-                    region.isOcean = true;
+                    regionNumber++;
                 }
-                
-                region.continentID = continentID;
+
+                region.generationOrder = generationOrder;
                 notTreatedRegions.Remove(region);
                 neighborRegions.Remove(region);
                 foreach (Region neighbor in region.neighbors)
@@ -799,344 +585,838 @@ namespace UniversalysWorldGenerator
                 region = neighborRegions[dice.Next(0, neighborRegions.Count / 2)];
                 size--;
             } while (size > 0);
+
             hotspot:;
+            return regionNumber;
         }
 
-        public void CreateCoastalMountains(Region region)
+        /// <summary>
+        /// Places a low depth sea filled with islands
+        /// </summary>
+        /// <param name="region"></param>
+        /// <returns></returns>
+        public int CreateSea(Region region)
         {
-            int size = dice.Next(12 - RANDOMSTEP / 2, 22 - RANDOMSTEP);
-            int baseHeight = dice.Next(5, 9) * dice.Next(3, 7);
-            bool north = false, east = false; // Allows to choose which side is the sea
-
+            // We limit ourselves to a given size a little above 1 Mass
+            int size = dice.Next(6 * MASS / 7, 11 * MASS / 7);
+            int regionNumber = 0;
             List<Region> neighborRegions = new List<Region>();
-            List<Region> hillNeighborRegions = new List<Region>();
-            List<Region> seaNeighborRegions = new List<Region>();
-            List<Region> mountain = new List<Region>();
-
-            if (dice.Next(1, 3) == 1)
-            {
-                north = true;
-            }
-            if (dice.Next(1, 3) == 1)
-            {
-                east = true;
-            }
-
+            // And we operate until we reach it, or have no room to extend ourselves
             do
             {
-                region.height = baseHeight + dice.Next(10, 40);
-                region.isMountain = true;
-                if (dice.Next(1,5) == 1)
+                // A sea has a little more islands than an ocean, and less of these are volcanic in origin than in an ocean
+                if (dice.Next(1, 81) == 1)
                 {
-                    region.isVolcano = true;
+                    region.height = dice.Next(1, 3) + dice.Next(2, 6);
+                    region.isSmallIsland = true;
+                    regionNumber++;
+                    if (dice.Next(1, 6) == 1)
+                    {
+                        region.height += dice.Next(3, 8);
+                        region.isVolcano = true;
+                    }
+                }
+                // Most areas are however made of continental shelves
+                else
+                {
+                    region.height = -dice.Next(5, 20) - dice.Next(1, 5) - dice.Next(1, 4);
+                    regionNumber++;
                 }
 
-                region.continentID = continentID;
+                region.generationOrder = generationOrder;
                 notTreatedRegions.Remove(region);
                 neighborRegions.Remove(region);
+
+                // We move to one of the neighbors
                 foreach (Region neighbor in region.neighbors)
                 {
-                    if (neighborRegions.Contains(neighbor))
-                    {
-                        if ((neighbor.IsNorthFrom(region) && north) || (neighbor.IsSouthFrom(region) && !north))
-                        {
-                            if ((neighbor.IsEastFrom(region) && east) || (neighbor.IsWestFrom(region) && !east))
-                            {
-                                seaNeighborRegions.Add(neighbor);
-                            }
-                            else
-                            {
-                                hillNeighborRegions.Add(neighbor);
-                            }
-                        }
-                        else
-                        {
-                            if ((neighbor.IsEastFrom(region) && east) || (neighbor.IsWestFrom(region) && !east))
-                            {
-                                hillNeighborRegions.Add(neighbor);
-                            }
-                            else
-                            {
-                                seaNeighborRegions.Add(neighbor);
-                            }
-                        }
-                        neighborRegions.Remove(neighbor);
-                    }
-                    else if (notTreatedRegions.Contains(neighbor) && !(seaNeighborRegions.Contains(neighbor) || hillNeighborRegions.Contains(neighbor)))
+                    if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
                     {
                         neighborRegions.Add(neighbor);
                     }
                 }
                 if (neighborRegions.Count == 0)
                 {
-                    goto finish;
+                    goto hotspot;
                 }
                 region = neighborRegions[dice.Next(0, neighborRegions.Count)];
                 size--;
             } while (size > 0);
-            
-            finish:;
-        }
-
-        public void GenerateLandmass()
-        {
-            int rand;
-
-            notTreatedRegions.AddRange(regionList);
-            Region region;
-
-            while (notTreatedRegions.Count != 0)
-            {
-                region = notTreatedRegions[dice.Next(0, notTreatedRegions.Count)];
-                CreateOcean(region);
-            }
-
-            //while (notTreatedRegions.Count > (2 * REGION / 5))
-            //{
-            //    // Choosing what kind of landmass to build
-            //    rand = dice.Next(0, 12);
-            //    switch (rand)
-            //    {
-            //        case 0:
-            //            // Very large ocean
-            //            CreateLandmass(1, 3800 / RANDOMSTEP);
-            //            break;
-            //        case 1:
-            //            // Large ocean
-            //            CreateLandmass(1, 3400 / RANDOMSTEP);
-            //            break;
-            //        case 2:
-            //            // Ocean
-            //            CreateLandmass(1, 2800 / RANDOMSTEP);
-            //            break;
-            //        case 3:
-            //            // Small Ocean
-            //            CreateLandmass(1, 2500 / RANDOMSTEP);
-            //            break;
-            //        case 4:
-            //            // Smaller Ocean
-            //            CreateLandmass(1, 2000 / RANDOMSTEP);
-            //            break;
-            //        case 5:
-            //            // Large Continent
-            //            CreateLandmass(2, 2000 / RANDOMSTEP);
-            //            break;
-            //        case 6:
-            //            // Continent
-            //            CreateLandmass(2, 1700 / RANDOMSTEP);
-            //            break;
-            //        case 7:
-            //            // Small Continent
-            //            CreateLandmass(2, 1500 / RANDOMSTEP);
-            //            break;
-            //        case 8:
-            //            // Little Continent
-            //            CreateLandmass(2, 1100 / RANDOMSTEP);
-            //            break;
-            //        case 9:
-            //            // Big Hilly
-            //            CreateLandmass(3, 1250 / RANDOMSTEP);
-            //            break;
-            //        case 10:
-            //            // Small Hilly
-            //            CreateLandmass(3, 1000 / RANDOMSTEP);
-            //            break;
-            //        case 11:
-            //            // Archipelago
-            //            CreateLandmass(4, 1400 / RANDOMSTEP);
-            //            break;
-
-            //    }
-            //    continentID++;
-            //}
-            //while (notTreatedRegions.Count > 0)
-            //{
-            //    // Choosing what kind of landmass to build
-            //    rand = dice.Next(0, 10);
-            //    switch (rand)
-            //    {
-            //        case 0:
-            //            // Inner sea
-            //            CreateLandmass(5, 1100 / RANDOMSTEP);
-            //            break;
-            //        case 1:
-            //            // Small inner sea
-            //            CreateLandmass(5, 850 / RANDOMSTEP);
-            //            break;
-            //        case 2:
-            //            // Massive Plains
-            //            CreateLandmass(6, 1000 / RANDOMSTEP);
-            //            break;
-            //        case 3:
-            //            // Plains
-            //            CreateLandmass(6, 800 / RANDOMSTEP);
-            //            break;
-            //        case 4:
-            //            // Small plains
-            //            CreateLandmass(6, 650 / RANDOMSTEP);
-            //            break;
-            //        case 5:
-            //            // Plateau
-            //            CreateLandmass(7, 600 / RANDOMSTEP);
-            //            break;
-            //        case 6:
-            //            // Small plateau
-            //            CreateLandmass(7, 400 / RANDOMSTEP);
-            //            break;
-            //        case 7:
-            //            // Small hills
-            //            CreateLandmass(7, 250 / RANDOMSTEP);
-            //            break;
-            //        case 8:
-            //            // Island chains
-            //            CreateLandmass(8, 450 / RANDOMSTEP);
-            //            break;
-            //        case 9:
-            //            // Small island chain
-            //            CreateLandmass(8, 300 / RANDOMSTEP);
-            //            break;
-            //    }
-            //    continentID++;
-            //}
-            //// Creating a random amount of mountain ranges
-            //int j = 0;
-            //rand = dice.Next(REGION / 200, REGION / 160);
-            //while (j < rand)
-            //{
-            //    CreateMountainRange();
-            //    j++;
-            //}
-        }
-
-        public void CreateMountainRange()
-        {
-            Region region;
-
-            int i;
-            int rand;
-            int globalHeight;
-            List<Region> hillyRegions = new List<Region>();
-            List<Region> globalNeighbors = new List<Region>();
-            // 1) Choose the starting point to spread from
-
-            do
-            {
-                rand = dice.Next(0, REGION);
-            } while (regionList[rand].IsWater() || regionList[rand].isMountain);
-            region = regionList[rand];
-            globalHeight = dice.Next(35, 60);
-            region.height = globalHeight + dice.Next(0, 20) + dice.Next(0, 20);
-            region.isMountain = true;
-
-            //Add region Neighbors to global neighbors list
-
-            hillyRegions.AddRange(region.neighbors);
-
-            i = dice.Next(8, 35 - RANDOMSTEP);
-
-
-            // 2) Use the neighbors to spread
-            while (i > 0)
-            {
-
-                rand = dice.Next(0, hillyRegions.Count);
-
-                region = hillyRegions[rand];
-                if (region.height > 0)
-                {
-                    region.height = globalHeight + dice.Next(0, 20) + dice.Next(0, 20);
-                    region.isMountain = true;
-                }
-                else if (region.height < -40)
-                {
-                    region.height = -dice.Next(40, 80) - 10;
-                    if (region.height < -70)
-                    {
-                        region.isOceanTrench = true;
-                    }
-                }
-                hillyRegions.Remove(region);
-
-                globalNeighbors.AddRange(hillyRegions);
-                hillyRegions.Clear();
-                hillyRegions.AddRange(region.neighbors);
-
-                i--;
-            }
-            globalNeighbors = globalNeighbors.Distinct().ToList();
-            //If in the global neighbors list the current evalued item is not a MoutainRange change it to Hill.
-            i = 0;
-            foreach (Region global in globalNeighbors)
-            {
-                if (!global.isMountain)
-                {
-                    if (global.height < -70)
-                    {
-                        global.isOceanTrench = true;
-                    }
-                    else if (global.height < -40)
-                    {
-                        global.isOcean = true;
-                    }
-                    else if (global.height < 0 && !(global.height < -40))
-                    {
-                        global.isSea = true;
-                    }
-                    else
-                    {
-                        global.isHilly = true;
-                        global.height += dice.Next(10 - region.height / 20, 20 - region.height / 10);
-                    }
-                }
-            }
-
+            hotspot:;
+            return regionNumber;
         }
 
         /// <summary>
-        /// Cleaning the world from many inner oceans
+        /// Places a low depth sea filled with islands
+        /// </summary>
+        /// <param name="region"></param>
+        /// <returns></returns>
+        public int CreateIsland(Region region)
+        {
+            // Island chains are relativel small area made of land and sea alike, around 1 Mass big
+            int size = dice.Next(2 * MASS / 3, 4 * MASS / 3);
+            int regionNumber = 0;
+            int islandChance;
+            bool island;
+            int rand;
+            List<Region> neighborRegions = new List<Region>();
+            List<Region> islandRegion = new List<Region>();
+            do
+            {
+                // There are larger islands part of those systems. If we start from a larger island, we have larger probability to prolong it
+                island = false;
+                if (islandRegion.Contains(region))
+                {
+                    islandChance = 11;
+                }
+                else
+                {
+                    islandChance = 6;
+                }
+                rand = dice.Next(1, 15);
+                // ... But also a lot of smaller ones are present around
+                if (rand <= 4)
+                {
+                    region.height = dice.Next(1, 3) + dice.Next(2, 6);
+                    region.isSmallIsland = true;
+                    regionNumber++;
+                }
+                // Large islands seems to be tall, but that's to ensure their survivability when blurring the height of regions
+                else if (rand < islandChance)
+                {
+                    region.height = dice.Next(15, 25) + dice.Next(0, 16);
+                    regionNumber++;
+                    island = true;
+                }
+                else
+                {
+                    region.height = -dice.Next(5, 20) - dice.Next(1, 5) - dice.Next(1, 4);
+                    regionNumber++;
+                }
+
+                region.generationOrder = generationOrder;
+                notTreatedRegions.Remove(region);
+                neighborRegions.Remove(region);
+
+                // Usual extension to neighbors by now
+                foreach (Region neighbor in region.neighbors)
+                {
+                    if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
+                    {
+                        neighborRegions.Add(neighbor);
+                        if (island)
+                        {
+                            islandRegion.Add(neighbor);
+                        }
+                    }
+                }
+                if (neighborRegions.Count == 0)
+                {
+                    goto hotspot;
+                }
+                region = neighborRegions[dice.Next(0, neighborRegions.Count)];
+                size--;
+            } while (size > 0);
+            hotspot:;
+            return regionNumber;
+        }
+
+        /// <summary>
+        /// Procedural coastal mountains generation, akin to the Andean structures
+        /// </summary>
+        /// <param name="region"></param>
+        public int CreateCoastalMountains(Region region)
+        {
+            // Mountains are long structures that are rectilign in a sense
+            int size = dice.Next(3 * MASS / 7, 11 * MASS / 7);
+            int baseHeight = dice.Next(5, 9) * dice.Next(3, 7); // This gives homogeneity to the mountain range's height
+            double change = 0;
+            int regionNumber = 0;
+            double[] direction = new double[2];
+            double chainX = region.X, chainY = region.Y;
+            bool endChain = false;
+
+            List<Region> hillNeighborRegions = new List<Region>();
+            List<Region> seaNeighborRegions = new List<Region>();
+            List<Region> mountain = new List<Region>();
+
+            // Initialize the mountain's original direction
+            direction[0] = dice.NextDouble();
+            direction[1] = 1 - direction[0];
+            if (dice.Next(1, 3) == 1)
+            {
+                direction[0] *= -1;
+            }
+            if (dice.Next(1, 3) == 1)
+            {
+                direction[1] *= -1;
+            }
+
+            do
+            {
+                foreach (Region neighbor in region.neighbors)
+                {
+                    if (!seaNeighborRegions.Contains(neighbor) && !hillNeighborRegions.Contains(neighbor) && !mountain.Contains(neighbor))
+                    {
+                        // Mountain going south east, sea placed north east. Then, we rotate from that
+                        if ((direction[0] >= 0 && direction[1] >= 0 && (neighbor.IsEastFrom(region) && neighbor.IsNorthFrom(region))) ||
+                            (direction[0] <= 0 && direction[1] >= 0 && (neighbor.IsEastFrom(region) && neighbor.IsSouthFrom(region))) ||
+                            (direction[0] <= 0 && direction[1] <= 0 && (neighbor.IsWestFrom(region) && neighbor.IsSouthFrom(region))) ||
+                            (direction[0] >= 0 && direction[1] <= 0 && (neighbor.IsWestFrom(region) && neighbor.IsNorthFrom(region))))
+                        {
+                            seaNeighborRegions.Add(neighbor);
+                        }
+                        else
+                        {
+                            hillNeighborRegions.Add(neighbor);
+                        }
+                    }
+                }
+
+                // Loop seeking for next region
+                do
+                {
+                    chainX += direction[0];
+                    chainY += direction[1];
+                    chainX = Region.CalculateX(chainX);
+                    if (chainY < 0 || chainY > LATITUDE - 1 || !notTreatedRegions.Contains(regionList[mapMask[(int)chainX, (int)chainY]]))
+                    {
+                        endChain = true;
+                    }
+                } while (!endChain && mapMask[(int)chainX, (int)chainY] == region.ID);
+
+
+                // finish the treatment of the region, then get to the new one. If that region is part of the hill and sea found before, of course, remove it from the list
+                size--;
+                region.height = baseHeight + dice.Next(0, 40);
+                notTreatedRegions.Remove(region);
+                regionNumber++;
+                mountain.Add(region);
+                if (dice.Next(1, 5) == 1)
+                {
+                    region.isVolcano = true;
+                }
+                region.generationOrder = generationOrder;
+
+                if (!endChain)
+                {
+                    region = regionList[mapMask[(int)chainX, (int)chainY]];
+                    seaNeighborRegions.Remove(region);
+                    hillNeighborRegions.Remove(region);
+
+                    // apply a slight change in the direction to not have too much of a linear range
+                    change = dice.Next(-12, 13);
+                    direction = Region.LineRotation(direction, change);
+                }
+
+            } while (size > 0 && !endChain);
+
+            // There, we generate the trench areas and the ocean around it
+            foreach (Region seaRegion in seaNeighborRegions)
+            {
+                seaRegion.height = -dice.Next(75, 90);
+                seaRegion.isOceanTrench = true;
+                regionNumber++;
+                notTreatedRegions.Remove(seaRegion);
+                region.generationOrder = generationOrder;
+                foreach (Region seaLayerRegion in seaRegion.neighbors)
+                {
+                    if (notTreatedRegions.Contains(seaLayerRegion) && !seaNeighborRegions.Contains(seaLayerRegion) && !hillNeighborRegions.Contains(seaLayerRegion) && !mountain.Contains(seaLayerRegion))
+                    {
+                        seaLayerRegion.height = -dice.Next(40, 60) - dice.Next(1, 8) - dice.Next(1, 6);
+                        regionNumber++;
+                        notTreatedRegions.Remove(seaLayerRegion);
+
+                    }
+                }
+
+            }
+            // The rest is made of hills, around a third the height of a mountain range, followed by plateau or plains depending of the base height
+            foreach (Region hillRegion in hillNeighborRegions)
+            {
+                hillRegion.height = (baseHeight + dice.Next(0, 15)) / 2;
+                regionNumber++;
+                notTreatedRegions.Remove(hillRegion);
+                region.generationOrder = generationOrder;
+                foreach (Region landLayerRegion in hillRegion.neighbors)
+                {
+                    if (notTreatedRegions.Contains(landLayerRegion) && !seaNeighborRegions.Contains(landLayerRegion) && !hillNeighborRegions.Contains(landLayerRegion) && !mountain.Contains(landLayerRegion))
+                    {
+                        landLayerRegion.height = (baseHeight + dice.Next(2, 6) * dice.Next(3, 6)) / 2;
+                        regionNumber++;
+                        notTreatedRegions.Remove(landLayerRegion);
+
+                    }
+                }
+            }
+            return regionNumber;
+        }
+
+        /// <summary>
+        /// Inner mountain range generation
+        /// </summary>
+        /// <param name="region"></param>
+        public int CreateContinentalMountains(Region region)
+        {
+            // Continental ountains are slightly shorter than their coastal counterparts
+            int size = dice.Next(3 * MASS / 7, 8 * MASS / 7);
+            int baseHeight = dice.Next(5, 9) * dice.Next(3, 7); // This gives homogeneity to the mountain range's height
+            int change = 0;
+            int regionNumber = 0;
+            double[] direction = new double[2];
+            double chainX = region.X, chainY = region.Y;
+            bool endChain = false;
+
+            List<Region> hillNeighborRegions = new List<Region>();
+            List<Region> mountain = new List<Region>();
+
+            // Initialize the mountain's original direction
+            direction[0] = dice.NextDouble();
+            direction[1] = 1 - direction[0];
+            if (dice.Next(1, 3) == 1)
+            {
+                direction[0] *= -1;
+            }
+            if (dice.Next(1, 3) == 1)
+            {
+                direction[1] *= -1;
+            }
+
+            do
+            {
+                foreach (Region neighbor in region.neighbors)
+                {
+                    if (!hillNeighborRegions.Contains(neighbor) && !mountain.Contains(neighbor))
+                    {
+                        hillNeighborRegions.Add(neighbor);
+                    }
+                }
+
+                // Loop seeking for next region
+                do
+                {
+                    chainX += direction[0];
+                    chainY += direction[1];
+                    chainX = Region.CalculateX(chainX);
+                    if (chainY < 0 || chainY > LATITUDE - 1 || !notTreatedRegions.Contains(regionList[mapMask[(int)chainX, (int)chainY]]))
+                    {
+                        endChain = true;
+                    }
+                } while (!endChain && mapMask[(int)chainX, (int)chainY] == region.ID);
+
+
+                // finish the treatment of the region, then get to the new one. If that region is part of the hill and sea found before, of course, remove it from the list
+                size--;
+                region.height = baseHeight + dice.Next(0, 40);
+                notTreatedRegions.Remove(region);
+                regionNumber++;
+                mountain.Add(region);
+                if (dice.Next(1, 5) == 1)
+                {
+                    region.isVolcano = true;
+                }
+                region.generationOrder = generationOrder;
+
+                if (!endChain)
+                {
+                    region = regionList[mapMask[(int)chainX, (int)chainY]];
+                    hillNeighborRegions.Remove(region);
+
+                    // apply a slight change in the direction to not have too much of a linear range
+                    change = dice.Next(-12, 13);
+                    Region.LineRotation(direction, change);
+                }
+
+            } while (size > 0 && !endChain);
+
+            // The rest is made of hills, around half the height of a mountain range, followed by plateau or plains
+            foreach (Region hillRegion in hillNeighborRegions)
+            {
+                hillRegion.height = (baseHeight + dice.Next(0, 15)) / 2;
+                regionNumber++;
+                notTreatedRegions.Remove(hillRegion);
+                region.generationOrder = generationOrder;
+                foreach (Region landLayerRegion in hillRegion.neighbors)
+                {
+                    if (notTreatedRegions.Contains(landLayerRegion) && !hillNeighborRegions.Contains(landLayerRegion) && !mountain.Contains(landLayerRegion))
+                    {
+                        landLayerRegion.height = (baseHeight + dice.Next(2, 6) * dice.Next(3, 6)) / 2;
+                        regionNumber++;
+                        notTreatedRegions.Remove(landLayerRegion);
+
+                    }
+                }
+            }
+            return regionNumber;
+        }
+
+        /// <summary>
+        /// Continues extending an ocean
+        /// </summary>
+        /// <param name="region"></param>
+        public void ExtendOcean(Region region)
+        {
+            // Ocean extension is maybe the largest one, but even that one barely pass the Mass size
+            int size = dice.Next(4 * MASS  / 9, 11 * MASS / 9);
+            List<Region> neighborRegions = new List<Region>();
+            do
+            {
+                // We have still a low number of islands
+                if (dice.Next(1, 151) == 1)
+                {
+                    region.height = dice.Next(1, 3) + dice.Next(2, 6);
+                    region.isSmallIsland = true;
+                    if (dice.Next(1, 3) == 1)
+                    {
+                        region.height += dice.Next(3, 8);
+                        region.isVolcano = true;
+                    }
+                }
+                else
+                {
+                    region.height = -dice.Next(40, 60) - dice.Next(1, 8) - dice.Next(1, 6);
+                }
+
+                region.generationOrder = generationOrder;
+                notTreatedRegions.Remove(region);
+                neighborRegions.Remove(region);
+                foreach (Region neighbor in region.neighbors)
+                {
+                    if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
+                    {
+                        neighborRegions.Add(neighbor);
+                    }
+                }
+                if (neighborRegions.Count > 0)
+                {
+                    region = neighborRegions[0];
+                }
+                size--;
+            } while (size > 0);
+        }
+
+        /// <summary>
+        /// Ocean filled with islands
+        /// </summary>
+        /// <param name="region"></param>
+        public void ExtendOceanArchipelago(Region region)
+        {
+            // Archipelagoes are the logical prolongation of an island chains, or a smaller one simply
+            int size = dice.Next(2 * MASS / 9, 5 * MASS / 9);
+            int rand;
+            List<Region> neighborRegions = new List<Region>();
+            do
+            {
+                rand = dice.Next(1, 26);
+                if (rand < 6)
+                {
+                    region.height = dice.Next(1, 3) + dice.Next(2, 6);
+                    region.isSmallIsland = true;
+                    if (dice.Next(1, 3) == 1)
+                    {
+                        region.height += dice.Next(3, 8);
+                        region.isVolcano = true;
+                    }
+                }
+                else if (rand < 8)
+                {
+                    region.height = dice.Next(1, 10) + dice.Next(3, 15);
+                    if (dice.Next(1, 5) == 1)
+                    {
+                        region.height += dice.Next(4, 12);
+                        region.isVolcano = true;
+                    }
+                }
+                else
+                {
+                    region.height = -dice.Next(40, 60) - dice.Next(1, 8) - dice.Next(1, 6);
+                }
+
+                region.generationOrder = generationOrder;
+                notTreatedRegions.Remove(region);
+                neighborRegions.Remove(region);
+                foreach (Region neighbor in region.neighbors)
+                {
+                    if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
+                    {
+                        neighborRegions.Add(neighbor);
+                    }
+                }
+                if (neighborRegions.Count > 0)
+                {
+                    region = neighborRegions[0];
+                }
+                size--;
+            } while (size > 0);
+        }
+
+        /// <summary>
+        /// Brings a low depth aquatic area
+        /// </summary>
+        /// <param name="region"></param>
+        public void ExtendSea(Region region)
+        {
+            // Extending sea on around half a mass
+            int size = dice.Next(3 * MASS / 10, 6 * MASS / 10);
+            int rand;
+            List<Region> neighborRegions = new List<Region>();
+            do
+            {
+                rand = dice.Next(1, 101);
+                if (rand < 6)
+                {
+                    region.height = dice.Next(1, 3) + dice.Next(2, 6);
+                    region.isSmallIsland = true;
+                    if (dice.Next(1, 3) == 1)
+                    {
+                        region.height += dice.Next(3, 8);
+                        region.isVolcano = true;
+                    }
+                }
+                // A small chance of generating larger islands
+                else if (rand < 12)
+                {
+                    region.height = dice.Next(1, 15) + dice.Next(15, 35);
+                    if (dice.Next(1, 5) == 1)
+                    {
+                        region.height += dice.Next(7, 20);
+                        region.isVolcano = true;
+                    }
+                }
+                // Depth is limited in those areas
+                else
+                {
+                    region.height = -dice.Next(1, 5) * dice.Next(1, 5) - dice.Next(1, 6);
+                }
+
+                region.generationOrder = generationOrder;
+                notTreatedRegions.Remove(region);
+                neighborRegions.Remove(region);
+                foreach (Region neighbor in region.neighbors)
+                {
+                    if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
+                    {
+                        neighborRegions.Add(neighbor);
+                    }
+                }
+                if (neighborRegions.Count > 0)
+                {
+                    region = neighborRegions[0];
+                }
+                size--;
+            } while (size > 0);
+        }
+
+        /// <summary>
+        /// Relatively flat area, perfect for rivers to flow into
+        /// </summary>
+        /// <param name="region"></param>
+        public void ExtendPlain(Region region)
+        {
+            // Plains are relatively vast, but a little below a Mass still
+            int size = dice.Next(4 * MASS / 9, 8 * MASS / 9);
+            int rand;
+            List<Region> neighborRegions = new List<Region>();
+            do
+            {
+                rand = dice.Next(1, 18);
+                // There is a limited chance to build higher regions, soon to be smoothed down
+                if (rand < 6)
+                {
+                    region.height = dice.Next(3, 7) * dice.Next(4, 9) + dice.Next(9, 18);
+                }
+                else
+                {
+                    region.height = dice.Next(1, 7) * dice.Next(1, 6) + dice.Next(1, 10);
+                }
+
+                region.generationOrder = generationOrder;
+                notTreatedRegions.Remove(region);
+                neighborRegions.Remove(region);
+                foreach (Region neighbor in region.neighbors)
+                {
+                    if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
+                    {
+                        neighborRegions.Add(neighbor);
+                    }
+                }
+                if (neighborRegions.Count > 0)
+                {
+                    region = neighborRegions[0];
+                }
+                size--;
+            } while (size > 0);
+        }
+
+        /// <summary>
+        /// Hill filled area
+        /// </summary>
+        /// <param name="region"></param>
+        public void ExtendLand(Region region)
+        {
+            // Land areas are usually higher than plains and have more chance to start the generation of rivers
+            int size = dice.Next(3 * MASS / 11, 7 * MASS / 11);
+            int rand;
+            List<Region> neighborRegions = new List<Region>();
+            do
+            {
+                rand = dice.Next(1, 18);
+                // Height tends to be higher than plains
+                if (rand < 11)
+                {
+                    region.height = dice.Next(3, 7) * dice.Next(4, 9) + dice.Next(12, 21);
+                }
+                else
+                {
+                    region.height = dice.Next(1, 7) * dice.Next(2, 6) + dice.Next(10, 21);
+                }
+
+                region.generationOrder = generationOrder;
+                notTreatedRegions.Remove(region);
+                neighborRegions.Remove(region);
+                foreach (Region neighbor in region.neighbors)
+                {
+                    if (!neighborRegions.Contains(neighbor) && notTreatedRegions.Contains(neighbor))
+                    {
+                        neighborRegions.Add(neighbor);
+                    }
+                }
+                if (neighborRegions.Count > 0)
+                {
+                    region = neighborRegions[0];
+                }
+                size--;
+            } while (size > 0);
+        }
+
+        /// <summary>
+        /// Main function to create the height map
+        /// </summary>
+        public void GenerateLandmass()
+        {
+            int rand;
+            int regionChange;
+            Region randRegion;
+
+            notTreatedRegions.AddRange(regionList);
+
+            // This defines the general repartition of land generation on the world map
+            OCEAN = 55 * REGION / 100;
+            SEA = 59 * REGION / 100;
+            ISLAND = 66 * REGION / 100;
+            VALLEY = 84 * REGION / 100;
+            COASTMOUNTAIN = 93 * REGION / 100;
+            MOUNTAIN = REGION;
+
+
+            // Each time we generate a type of structure, we lower the chance of having more structures of the same type, so to keep the ratio going
+            // and somewhat ensure to have a variety of structures to build onto
+            while (notTreatedRegions.Count > (REGION / 3))
+            {
+                rand = dice.Next(0, (OCEAN + SEA + ISLAND + VALLEY + COASTMOUNTAIN + MOUNTAIN));
+                if (rand < OCEAN)
+                {
+                    regionChange = CreateOcean(notTreatedRegions[dice.Next(0, notTreatedRegions.Count)]);
+                    OCEAN -= regionChange;
+                    SEA -= regionChange;
+                    ISLAND -= regionChange;
+                    VALLEY -= regionChange;
+                    COASTMOUNTAIN -= regionChange;
+                    MOUNTAIN -= regionChange;
+                }
+                else if (rand < OCEAN + SEA)
+                {
+                    regionChange = CreateSea(notTreatedRegions[dice.Next(0, notTreatedRegions.Count)]);
+                    SEA -= regionChange;
+                    ISLAND -= regionChange;
+                    VALLEY -= regionChange;
+                    COASTMOUNTAIN -= regionChange;
+                    MOUNTAIN -= regionChange;
+                }
+                else if (rand < OCEAN + SEA + ISLAND)
+                {
+                    regionChange = CreateSea(notTreatedRegions[dice.Next(0, notTreatedRegions.Count)]);
+                    ISLAND -= regionChange;
+                    VALLEY -= regionChange;
+                    COASTMOUNTAIN -= regionChange;
+                    MOUNTAIN -= regionChange;
+                }
+                else if (rand < OCEAN + SEA + ISLAND + VALLEY)
+                {
+                    regionChange = CreateValley(notTreatedRegions[dice.Next(0, notTreatedRegions.Count)]);
+                    VALLEY -= regionChange;
+                    COASTMOUNTAIN -= regionChange;
+                    MOUNTAIN -= regionChange;
+                }
+                else if (rand < OCEAN + SEA + ISLAND + VALLEY + COASTMOUNTAIN)
+                {
+                    regionChange = CreateCoastalMountains(notTreatedRegions[dice.Next(0, notTreatedRegions.Count)]);
+                    COASTMOUNTAIN -= regionChange;
+                    MOUNTAIN -= regionChange;
+                }
+                else
+                {
+                    regionChange = CreateContinentalMountains(notTreatedRegions[dice.Next(0, notTreatedRegions.Count)]);
+                    MOUNTAIN -= regionChange;
+                }
+                generationOrder++;
+            }
+            // Then, we extend the regions once generated
+            while (notTreatedRegions.Count > 0)
+            {
+                // We select a region next to an already treated region
+                do
+                {
+                    randRegion = notTreatedRegions[dice.Next(0, notTreatedRegions.Count)];
+                } while (randRegion.IsIsolated());
+                // From places of high altitude, we get only land
+                if (randRegion.MeanHeight() > 30)
+                {
+                    rand = dice.Next(1, 21);
+                    if (rand < 7)
+                    {
+                        ExtendPlain(randRegion);
+                    }
+                    else
+                    {
+                        ExtendLand(randRegion);
+                    }
+                }
+                // Lower areas can prolong plains from themselves more easily, but also give way for sea
+                else if (randRegion.MeanHeight() > 0)
+                {
+                    rand = dice.Next(1, 21);
+                    if (rand < 11)
+                    {
+                        ExtendPlain(randRegion);
+                    }
+                    else if (rand < 18)
+                    {
+                        ExtendLand(randRegion);
+                    }
+                    else
+                    {
+                        ExtendSea(randRegion);
+                    }
+                }
+                // Regions close to sea level will prolong sea and ocean alike, but also more archipelago
+                else if (randRegion.MeanHeight() > - 15)
+                {
+                    rand = dice.Next(1, 21);
+                    if (rand < 14)
+                    {
+                        ExtendOcean(randRegion);
+                    }
+                    else if (rand < 17)
+                    {
+                        ExtendSea(randRegion);
+                    }
+                    else
+                    {
+                        ExtendOceanArchipelago(randRegion);
+                    }
+                }
+                // Lower level regions gets to generate oceans mostly
+                else
+                {
+                    rand = dice.Next(1, 21);
+                    if (rand < 19)
+                    {
+                        ExtendOcean(randRegion);
+                    }
+                    else
+                    {
+                        ExtendOceanArchipelago(randRegion);
+                    }
+                }
+                generationOrder++;
+            }
+        }
+
+        /// <summary>
+        /// Cleaning the world from many inner oceans and harmonizing height. Places continental masses
         /// </summary>
         public void CleanLandmass()
         {
-            int rand;
             foreach (Region region in regionList)
             {
-                rand = dice.Next(1, 9);
-                if (region.height < 0 && region.IsLandlocked() && rand != 1)
+                // Small holes we remove by putting these at height = 0
+                if (region.IsLoneHole())
                 {
                     region.height = 0;
                     region.height = region.MeanHeight();
-                    region.isSea = false;
-                    region.isOcean = false;
                     region.isOceanTrench = false;
-                    region.isContinent = true;
+                }
+                // And then we rebalance the height of each region thanks to its neighbors
+                region.calculateHeight = (region.height + region.MeanHeight()) / 2;
+            }
+
+            foreach (Region region in regionList)
+            {
+                // Now we define the type of each reagion thanks to height. We stored the calculated height because we didn't want changes made in cascade
+                region.height = region.calculateHeight;
+                
+                if (region.height < -40)
+                {
+                    region.isOcean = true;
+                }
+                else if (region.height <= 0)
+                {
+                    // We do not want regions with a height of 0 in the end
+                    region.isSea = true;
+                    if (region.height == 0)
+                    {
+                        region.height = -1;
+                    }
+                }
+                else if (region.height <= 16)
+                {
+                    region.isValley = true;
+                }
+                else if (region.height <= 40)
+                {
+                    region.isHilly = true;
+                }
+                else
+                {
+                    region.isMountain = true;
+                }
+                if (region.isSmallIsland)
+                {
+                    // The averaging lowered the height of small islands, we restore it to a minimum there
+                    region.height = dice.Next(1, 3) + dice.Next(0, 8);
                 }
             }
+
         }
 
         #endregion
 
         #region Temperature
+        /// <summary>
+        /// Generating temperature worldwide
+        /// </summary>
         public void GenerateTemperature()
         {
             int rand;
 
             for (int i = 0; i < REGION; i++)
             {
-                rand = dice.Next(0, 14);
+                rand = dice.Next(0, 11);
 
                 // temperature depends on Latitude
-                regionList[i].temperature = 65 + rand - 140 * (Math.Abs(regionList[i].Y - (LATITUDE / 2))) / (LATITUDE / 2);
+                regionList[i].temperature = 75 + rand - 150 * (Math.Abs(regionList[i].Y - (LATITUDE / 2))) / (LATITUDE / 2);
 
-                // Sea based regions tends to be warmer
+                // Sea based regions tends to be warmer in all case
                 if (regionList[i].isSea)
                 {
-                    rand = dice.Next(3, 10);
+                    rand = dice.Next(10, 21);
                     regionList[i].temperature += rand;
                 }
                 // Oceans tends toward 0
                 if (regionList[i].isOcean)
                 {
-                    rand = dice.Next(4, 12);
+                    rand = dice.Next(5, 11);
                     if (regionList[i].temperature < 0)
                     {
                         regionList[i].temperature += rand;
@@ -1150,7 +1430,7 @@ namespace UniversalysWorldGenerator
                 // Lands lost in the middle of a continent tends toward the extremes
                 if (regionList[i].IsLandlocked())
                 {
-                    rand = dice.Next(6, 16);
+                    rand = dice.Next(5, 21);
                     if (regionList[i].temperature < 0)
                     {
                         regionList[i].temperature -= rand;
@@ -1163,10 +1443,11 @@ namespace UniversalysWorldGenerator
                 // Altitude has an impact on temperature
                 if (regionList[i].IsLand())
                 {
-                    regionList[i].temperature -= regionList[i].height / 10;
+                    regionList[i].temperature -= regionList[i].height / 5;
                 }
             }
         }
+
         #endregion
 
         #region Humidity
@@ -1391,7 +1672,7 @@ namespace UniversalysWorldGenerator
             River river;
             int numberRiver;
 
-            numberRiver = dice.Next(REGION / 27, REGION / 20);
+            numberRiver = dice.Next(REGION / 32, REGION / 25);
 
             while (numberRiver != 0)
             {
@@ -1400,7 +1681,7 @@ namespace UniversalysWorldGenerator
                 {
                     rand = dice.Next(0, REGION);
                     region = regionList[rand];
-                } while (!(region.height > 15 && (region.isTemperate || (region.isDesert && region.isMountain) || region.isTropical) && region.IsLandlocked()) && region.rivers.Count == 0);
+                } while (!(region.isHilly && (region.isTemperate || (region.isDesert && region.isMountain) || region.isTropical) && region.IsLandlocked()) && region.rivers.Count == 0);
 
                 river = new River(region);
                 riverList.Add(river);
@@ -1455,7 +1736,7 @@ namespace UniversalysWorldGenerator
                 }
 
                 // And we fill the region, testing if we join a second river or not. If we find that this river is nothing else than itself, we build an inner sea region. In any case
-                // erosion will do its workdigging slightly a valley and increase the local humidity somewhat
+                // erosion will do its work, digging slightly a valley and increase the local humidity somewhat
                 otherRiverReached = river.GenerateRiver(nextRegion);
                 if (!otherRiverReached)
                 {
@@ -1559,7 +1840,8 @@ namespace UniversalysWorldGenerator
             bool cold;
             bool north;
 
-            numberWind = dice.Next(REGION / 120, REGION / 100);
+
+            numberWind = dice.Next(8 * MASS / 9, 10 * MASS / 9);
 
 
             while (numberWind != 0)
@@ -1593,12 +1875,15 @@ namespace UniversalysWorldGenerator
                 wind = new Wind(region, cold, north);
                 windList.Add(wind);
                 // Creating entire wind flow, with a limited distance it can run
-                rand = dice.Next(300, 600) + dice.Next(3, 30) * dice.Next(2, 20);
+                rand = dice.Next(6 * MASS / 9, 10 * MASS / 9);
                 PropagateWind(wind, rand);
 
                 numberWind--;
             }
         }
+
+
+        //////// TODO //////////
 
         /// <summary>
         /// Function dedicated to create the entire flow of wind from a starting region
@@ -1617,7 +1902,7 @@ namespace UniversalysWorldGenerator
             // Winds are moving until they reach either a pole or the equator
             while (windY > 0 && windY < LATITUDE - 1 && length > 0)
             {
-                length -= RANDOMSTEP;
+                length -= REGION / (MASS * 10);
                 // Dividing along the various cases for creating the wind movement. note that all movement are symetrical along the equatorial axis
                 if (stepCheck)
                 {
@@ -1769,7 +2054,7 @@ namespace UniversalysWorldGenerator
                                 }
                                 else
                                 {
-                                    length -= 7 * RANDOMSTEP;
+                                    length -= 7 * MASS;
                                 }
                                 break;
                             case 2:
@@ -1804,7 +2089,7 @@ namespace UniversalysWorldGenerator
                                 }
                                 else
                                 {
-                                    length -= 7 * RANDOMSTEP;
+                                    length -= 7 * MASS;
                                 }
                                 break;
                             case 3:
@@ -1839,7 +2124,7 @@ namespace UniversalysWorldGenerator
                                 }
                                 else
                                 {
-                                    length -= 7 * RANDOMSTEP;
+                                    length -= 7 * MASS;
                                 }
                                 break;
                             case 4:
@@ -1874,7 +2159,7 @@ namespace UniversalysWorldGenerator
                                 }
                                 else
                                 {
-                                    length -= 7 * RANDOMSTEP;
+                                    length -= 7 * MASS;
                                 }
                                 break;
                             default:
@@ -2540,7 +2825,7 @@ namespace UniversalysWorldGenerator
 
             result += "ID REGION : " + regionList[IDregion].ID.ToString() + Environment.NewLine;
 
-            result += "CONTINENT ID : " + regionList[IDregion].continentID.ToString() + Environment.NewLine;
+            result += "CONTINENT ID : " + regionList[IDregion].generationOrder.ToString() + Environment.NewLine;
 
             result += "REGION HEIGHT : " + regionList[IDregion].height.ToString() + Environment.NewLine;
 
@@ -2670,9 +2955,9 @@ namespace UniversalysWorldGenerator
                     // Painting the map, brown to white for continents, green blue to deep blue for water
                     if (regionList[mapMask[i, j]].isSmallIsland)
                     {
-                        colorRed = 130;
-                        colorGreen = 140;
-                        colorBlue = 80;
+                        colorRed = 120;
+                        colorGreen = 170;
+                        colorBlue = 60;
                     }
                     else if (regionList[mapMask[i, j]].height < 0)
                     {
@@ -2815,6 +3100,10 @@ namespace UniversalysWorldGenerator
                         colorRed = 50;
                         colorGreen = 100 + regionList[mapMask[i, j]].riverStream;
                         colorBlue = 50;
+                        if (colorGreen > 255)
+                        {
+                            colorGreen = 255;
+                        }
                     }
                     else if (regionList[mapMask[i, j]].rivers.Count > 0 && regionList[mapMask[i, j]].IsWater())
                     {
@@ -2955,8 +3244,8 @@ namespace UniversalysWorldGenerator
                 {
                     // Painting the map, brown to white for continents, green blue to deep blue for water
 
-                    colorRed = (25 * regionList[mapMask[i, j]].continentID) % 255;
-                    colorGreen = 50 * (regionList[mapMask[i, j]].continentID / 10) % 255;
+                    colorRed = (25 * regionList[mapMask[i, j]].generationOrder) % 255;
+                    colorGreen = 50 * (regionList[mapMask[i, j]].generationOrder / 10) % 255;
                     colorBlue = 0;
 
 

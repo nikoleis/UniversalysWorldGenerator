@@ -220,6 +220,7 @@ namespace UniversalysWorldGenerator
                     map.UpdateGeology();
                     map.DrawRiverMap();
                     map.DrawWindMap();
+                    map.DrawWaterCurrentMap();
                     generationStep = 100;
                     btnStep.Text = "Settle plants";
                     break;
