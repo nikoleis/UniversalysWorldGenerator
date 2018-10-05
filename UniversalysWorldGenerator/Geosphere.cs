@@ -39,32 +39,6 @@ namespace UniversalysWorldGenerator
             resources.Add("fuel", 0);
             resources.Add("appearance", 0);
         }
-        
-
-
-        //public int grain;
-        //public int fruit;
-        //public int meat;
-        //public int protein;
-        //public int sugar;
-        //public int spice;
-        //public int salt;
-        //public int alcohol;
-        //public int medical;
-        //public int freshWater;
-        //public int wood;
-        //public int stone;
-        //public int clay;
-        //public int metal;
-        //public int rareMetal;
-        //public int preciousMetal;
-        //public int gems;
-        //public int reagent;
-        //public int fabrics;
-        //public int dyes;
-        //public int leather;
-        //public int fuel;
-        //public int appearance;
 
         //public int mana;
         //public int magicMetal;

@@ -9,11 +9,17 @@ namespace UniversalysWorldGenerator
     class Plant : Biosphere
     {
         private static int Count = 0;
+        public int size; //
+        public int favoredTemp, favoredHeight, favoredHumid;
+        public List<Trait> traitsList;
+        public string description = "";
 
         public Plant()
         {
             Count++;
         }
+
+        /* Plant traits */
 
 
     }

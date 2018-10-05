@@ -60,6 +60,7 @@
     <Compile Include="Region.cs" />
     <Compile Include="River.cs" />
     <Compile Include="Stream.cs" />
+    <Compile Include="Trait.cs" />
     <Compile Include="WaterCurrent.cs" />
     <Compile Include="Wind.cs" />
     <Compile Include="WorldMap.cs" />

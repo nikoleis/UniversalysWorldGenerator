@@ -24,7 +24,7 @@ namespace UniversalysWorldGenerator
         {
             InitializeComponent();
             comboBox1.Items.Clear();
-            comboBox1.Items.AddRange(new string[] { "Height", "Temperature", "Humidity", "Climate", "Mountain", "Continent", "Rivers", "Winds", "Water currents" });
+            comboBox1.Items.AddRange(new string[] { "Height", "Temperature", "Humidity", "Climate", "Mountain", "Landmass", "Continent", "Rivers", "Winds", "Water currents" });
 
             if (!Directory.Exists(Program.filePath))
             {
@@ -38,19 +38,22 @@ namespace UniversalysWorldGenerator
             mapLoaded = true;
             InformationDisplay.Text = "";
 
-
             map.GenerateRegions();
             map.GenerateLandmass();
             map.CleanLandmass();
+            map.AssignContinent();
             map.GenerateTemperature();
             map.GenerateHumidity();
-            map.PlaceRivers();
             map.PlaceWinds();
             map.PlaceWaterCurrents();
+            map.ApplyMapChange();
+            // We apply winds and water current BEFORE generating rivers for the incoming erosion can alter potential river starting points 
+            map.PlaceRivers();
+            map.ApplyMapChange();
             map.GenerateDeposit();
             map.FlowingRiver();
             map.UpdateGeology();
-
+            
 
             map.DrawRegionMap();
             map.DrawHeightMap();
@@ -62,12 +65,10 @@ namespace UniversalysWorldGenerator
             map.DrawWaterCurrentMap();
 
             map.DrawMountainMap();
+            map.DrawLandmassMap();
             map.DrawContinentMap();
 
             InformationDisplay.Text += "Done !";
-            // Pour ne plus avoir besoin de relancer le générateur a chaque fois
-            // To not relaunch the generator every time we need a new map 
-
 
             using (var bmpTemp = new Bitmap(Program.filePath + "mapHeight.png"))
             {
@@ -140,24 +141,30 @@ namespace UniversalysWorldGenerator
                     pictureBox1.Image = img;
                 }
             if (comboBox1.SelectedIndex == 5)
-                using (var bmpTemp = new Bitmap(Program.filePath + "mapContinent.png"))
+                using (var bmpTemp = new Bitmap(Program.filePath + "mapLandmass.png"))
                 {
                     img = new Bitmap(bmpTemp);
                     pictureBox1.Image = img;
                 }
             if (comboBox1.SelectedIndex == 6)
-                using (var bmpTemp = new Bitmap(Program.filePath + "mapRiver.png"))
+                using (var bmpTemp = new Bitmap(Program.filePath + "mapContinent.png"))
                 {
                     img = new Bitmap(bmpTemp);
                     pictureBox1.Image = img;
                 }
             if (comboBox1.SelectedIndex == 7)
-                using (var bmpTemp = new Bitmap(Program.filePath + "mapWind.png"))
+                using (var bmpTemp = new Bitmap(Program.filePath + "mapRiver.png"))
                 {
                     img = new Bitmap(bmpTemp);
                     pictureBox1.Image = img;
                 }
             if (comboBox1.SelectedIndex == 8)
+                using (var bmpTemp = new Bitmap(Program.filePath + "mapWind.png"))
+                {
+                    img = new Bitmap(bmpTemp);
+                    pictureBox1.Image = img;
+                }
+            if (comboBox1.SelectedIndex == 9)
                 using (var bmpTemp = new Bitmap(Program.filePath + "mapWaterCurrent.png"))
                 {
                     img = new Bitmap(bmpTemp);

@@ -11,7 +11,6 @@ namespace UniversalysWorldGenerator
         public static int LATITUDE = 800, LONGITUDE = 1200, REGION = 7000, MASS = 32;
         public static int OCEAN, SEA, ISLAND, VALLEY, COASTMOUNTAIN, MOUNTAIN;
         public Bitmap mapPaint = new Bitmap(LONGITUDE, LATITUDE);
-        // TODO : STOCK MAPMASK IN DATABASE
         public int[,] mapMask = new int[LONGITUDE, LATITUDE];
         public Region[] regionList = new Region[REGION];
         Random dice = new Random();
@@ -639,7 +638,8 @@ namespace UniversalysWorldGenerator
                 {
                     goto hotspot;
                 }
-                region = neighborRegions[dice.Next(0, neighborRegions.Count)];
+                // Seas should be blobby
+                region = neighborRegions[0];
                 size--;
             } while (size > 0);
             hotspot:;
@@ -826,7 +826,7 @@ namespace UniversalysWorldGenerator
                         seaLayerRegion.height = -dice.Next(40, 60) - dice.Next(1, 8) - dice.Next(1, 6);
                         regionNumber++;
                         notTreatedRegions.Remove(seaLayerRegion);
-
+                        region.generationOrder = generationOrder;
                     }
                 }
 
@@ -845,7 +845,7 @@ namespace UniversalysWorldGenerator
                         landLayerRegion.height = (baseHeight + dice.Next(2, 6) * dice.Next(3, 6)) / 2;
                         regionNumber++;
                         notTreatedRegions.Remove(landLayerRegion);
-
+                        region.generationOrder = generationOrder;
                     }
                 }
             }
@@ -943,7 +943,7 @@ namespace UniversalysWorldGenerator
                         landLayerRegion.height = (baseHeight + dice.Next(2, 6) * dice.Next(3, 6)) / 2;
                         regionNumber++;
                         notTreatedRegions.Remove(landLayerRegion);
-
+                        region.generationOrder = generationOrder;
                     }
                 }
             }
@@ -957,7 +957,7 @@ namespace UniversalysWorldGenerator
         public void ExtendOcean(Region region)
         {
             // Ocean extension is maybe the largest one, but even that one barely pass the Mass size
-            int size = dice.Next(4 * MASS  / 9, 11 * MASS / 9);
+            int size = dice.Next(4 * MASS / 9, 11 * MASS / 9);
             List<Region> neighborRegions = new List<Region>();
             do
             {
@@ -1300,7 +1300,7 @@ namespace UniversalysWorldGenerator
                     }
                 }
                 // Regions close to sea level will prolong sea and ocean alike, but also more archipelago
-                else if (randRegion.MeanHeight() > - 15)
+                else if (randRegion.MeanHeight() > -15)
                 {
                     rand = dice.Next(1, 21);
                     if (rand < 14)
@@ -1355,8 +1355,13 @@ namespace UniversalysWorldGenerator
             {
                 // Now we define the type of each reagion thanks to height. We stored the calculated height because we didn't want changes made in cascade
                 region.height = region.calculateHeight;
-                
-                if (region.height < -40)
+
+                if (region.isSmallIsland)
+                {
+                    // The averaging lowered the height of small islands, we restore it to a minimum there
+                    region.height = dice.Next(1, 3) + dice.Next(0, 8);
+                }
+                else if (region.height < -40)
                 {
                     region.isOcean = true;
                 }
@@ -1369,7 +1374,7 @@ namespace UniversalysWorldGenerator
                         region.height = -1;
                     }
                 }
-                else if (region.height <= 16)
+                else if (region.height <= 20)
                 {
                     region.isValley = true;
                 }
@@ -1381,12 +1386,108 @@ namespace UniversalysWorldGenerator
                 {
                     region.isMountain = true;
                 }
-                if (region.isSmallIsland)
-                {
-                    // The averaging lowered the height of small islands, we restore it to a minimum there
-                    region.height = dice.Next(1, 3) + dice.Next(0, 8);
-                }
+
             }
+
+        }
+
+        /// <summary>
+        /// This function assigns the continent ID of regions
+        /// </summary>
+        public void AssignContinent()
+        {
+            int continentID = 1;
+            int openOceanID = -1;
+            int size = 0;
+            List<Region> extension = new List<Region>();
+            notTreatedRegions.AddRange(regionList);
+            Region region;
+
+            while (notTreatedRegions.Count > 0)
+            {
+                region = notTreatedRegions[0];
+
+                if (region.IsLand() && !region.isSmallIsland)
+                {
+
+                    notTreatedRegions.Remove(region);
+                    region.continentID = continentID;
+
+                    size = dice.Next(11 * MASS, 18 * MASS);
+                    do
+                    {
+                        foreach (Region neighbor in region.neighbors)
+                        {
+                            if (notTreatedRegions.Contains(neighbor) && neighbor.IsLand() && !region.isSmallIsland && !extension.Contains(neighbor))
+                            {
+                                extension.Add(neighbor);
+                            }
+                        }
+                        if (extension.Count > 0)
+                        {
+                            region = extension[0];
+                            extension.Remove(region);
+                            notTreatedRegions.Remove(region);
+                            region.continentID = continentID;
+                            if (region.isMountain)
+                            {
+                                size -= 5;
+                            }
+                            else if (region.isHilly)
+                            {
+                                size -= 2;
+                            }
+                            else
+                            {
+                                size -= 1;
+                            }
+                        }
+                    } while (extension.Count > 0 && size > 0);
+
+                    extension.Clear();
+
+                    continentID++;
+                }
+                else
+                {
+                    notTreatedRegions.Remove(region);
+                    region.continentID = openOceanID;
+                    size = dice.Next(21 * MASS, 35 * MASS);
+                    do
+                    {
+                        foreach (Region neighbor in region.neighbors)
+                        {
+                            if (notTreatedRegions.Contains(neighbor) && (neighbor.IsWater() || neighbor.isSmallIsland) && !extension.Contains(neighbor))
+                            {
+                                extension.Add(neighbor);
+                            }
+                        }
+                        if (extension.Count > 0)
+                        {
+                            region = extension[0];
+                            extension.Remove(region);
+                            notTreatedRegions.Remove(region);
+                            region.continentID = openOceanID;
+                            if (region.isSea)
+                            {
+                                size -= 3;
+                            }
+                            else
+                            {
+                                size -= 1;
+                            }
+
+                        }
+                    } while (extension.Count > 0 && size > 0);
+
+                    extension.Clear();
+
+                    openOceanID--;
+                }
+                
+            }
+            // Second pass
+
 
         }
 
@@ -1410,7 +1511,7 @@ namespace UniversalysWorldGenerator
                 // Sea based regions tends to be warmer in all case
                 if (regionList[i].isSea)
                 {
-                    rand = dice.Next(10, 21);
+                    rand = dice.Next(5, 15);
                     regionList[i].temperature += rand;
                 }
                 // Oceans tends toward 0
@@ -1430,7 +1531,7 @@ namespace UniversalysWorldGenerator
                 // Lands lost in the middle of a continent tends toward the extremes
                 if (regionList[i].IsLandlocked())
                 {
-                    rand = dice.Next(5, 21);
+                    rand = dice.Next(3, 11);
                     if (regionList[i].temperature < 0)
                     {
                         regionList[i].temperature -= rand;
@@ -1445,12 +1546,16 @@ namespace UniversalysWorldGenerator
                 {
                     regionList[i].temperature -= regionList[i].height / 5;
                 }
+                regionList[i].calculateTemperature = regionList[i].temperature;
             }
         }
 
         #endregion
 
         #region Humidity
+        /// <summary>
+        /// Sets humidity worldwide
+        /// </summary>
         public void GenerateHumidity()
         {
             int pole, temperate, desert;
@@ -1493,9 +1598,14 @@ namespace UniversalysWorldGenerator
                 {
                     region.humidity = 100;
                 }
+                region.calculateHumidity = region.humidity;
             }
         }
 
+        /// <summary>
+        /// Polar humidity
+        /// </summary>
+        /// <param name="region"></param>
         public void SetPolarHumidity(Region region)
         {
             region.isPolar = true;
@@ -1523,6 +1633,10 @@ namespace UniversalysWorldGenerator
             }
         }
 
+        /// <summary>
+        /// Temperate region humidity
+        /// </summary>
+        /// <param name="region"></param>
         public void SetTemperateHumidity(Region region)
         {
             region.isTemperate = true;
@@ -1568,6 +1682,10 @@ namespace UniversalysWorldGenerator
 
         }
 
+        /// <summary>
+        /// Desertic area humidity
+        /// </summary>
+        /// <param name="region"></param>
         public void SetDesertHumidity(Region region)
         {
             region.isDesert = true;
@@ -1616,6 +1734,10 @@ namespace UniversalysWorldGenerator
             }
         }
 
+        /// <summary>
+        /// Tropical belt humidity
+        /// </summary>
+        /// <param name="region"></param>
         public void SetTropicalHumidity(Region region)
         {
 
@@ -1672,7 +1794,8 @@ namespace UniversalysWorldGenerator
             River river;
             int numberRiver;
 
-            numberRiver = dice.Next(REGION / 32, REGION / 25);
+            // There is around 5 MASS rivers populating the world
+            numberRiver = dice.Next(27 * MASS / 6, 32 * MASS / 6);
 
             while (numberRiver != 0)
             {
@@ -1722,11 +1845,17 @@ namespace UniversalysWorldGenerator
                     // Even if those regions are higher naturally, we want to ensure we avoid hilly and moutaneous regions if we can
                     if (neighbor.isHilly || neighbor.isMountain)
                     {
-                        meanHeight += 15;
+                        meanHeight += 10;
                     }
 
-                    //Adding a little random element here to potentially have a plain have two concurrent rivers on a couple regions
-                    meanHeight += dice.Next(0, 16);
+                    // We try to get rivers to not go where there is already one, but not making this effect too obvious. This helps limiting river looping on themselves
+                    if (neighbor.rivers.Count() > 0)
+                    {
+                        meanHeight += 8;
+                    }
+
+                    //Adding a little random element here
+                    meanHeight += dice.Next(0, 11);
 
                     if (meanHeight < lowestMeanHeight && !river.stream.Contains(neighbor))
                     {
@@ -1742,14 +1871,14 @@ namespace UniversalysWorldGenerator
                 {
                     region = nextRegion;
                     nextRegion = region.neighbors[0];
-                    region.humidity += dice.Next(10 - region.humidity / 20, 20 - region.humidity / 10);
+                    region.calculateHumidity += dice.Next(10 - region.humidity / 20, 20 - region.humidity / 10);
                     if (region.height > 0)
                     {
-                        region.height -= dice.Next((region.height) / 50, (region.height) / 25);
+                        region.calculateHeight -= dice.Next((region.height) / 50, (region.height) / 25);
                     }
-                    if (region.height == 0)
+                    if (region.calculateHeight == 0)
                     {
-                        region.height = 1;
+                        region.calculateHeight = 1;
                     }
                 }
                 // In case the river loops back on itself, create the sea
@@ -1760,6 +1889,7 @@ namespace UniversalysWorldGenerator
                         if (river.stream[river.stream.Count - 1] == river.stream[river.stream.Count - 3])
                         {
                             region.height = dice.Next(1, 8) + dice.Next(1, 4) - 12;
+                            region.calculateHeight = region.height;
                             region.isContinent = false;
                             region.isHilly = false;
                             region.isMountain = false;
@@ -1840,8 +1970,8 @@ namespace UniversalysWorldGenerator
             bool cold;
             bool north;
 
-
-            numberWind = dice.Next(8 * MASS / 9, 10 * MASS / 9);
+            // The amount of wind is pretty much the MASS value
+            numberWind = dice.Next(7 * MASS / 9, 11 * MASS / 9);
 
 
             while (numberWind != 0)
@@ -1875,329 +2005,166 @@ namespace UniversalysWorldGenerator
                 wind = new Wind(region, cold, north);
                 windList.Add(wind);
                 // Creating entire wind flow, with a limited distance it can run
-                rand = dice.Next(6 * MASS / 9, 10 * MASS / 9);
-                PropagateWind(wind, rand);
+                if (cold)
+                {
+                    PropagateColdWind(wind);
+                }
+                else
+                {
+
+                    PropagateWarmWind(wind);
+                }
 
                 numberWind--;
             }
         }
 
-
-        //////// TODO //////////
-
         /// <summary>
-        /// Function dedicated to create the entire flow of wind from a starting region
+        /// Function creating warm winds
         /// </summary>
         /// <param name="wind"></param>
-        public void PropagateWind(Wind wind, int length)
+        public void PropagateWarmWind(Wind wind)
         {
-            Region region = wind.stream.First();
-            int windX = region.X, windY = region.Y;
-            bool stepCheck = true; // True = diagonal step
-            int direction = 1; // 1: SE, 2: SW, 3: NW, 4: NE
-            int previousHumidity = region.humidity;
-            int previousTemperature = region.temperature;
-            bool stopWind = false;
-
-            // Winds are moving until they reach either a pole or the equator
-            while (windY > 0 && windY < LATITUDE - 1 && length > 0)
+            int length = dice.Next(6 * MASS / 9, 10 * MASS / 9);
+            int minTransit;
+            int compareTransit = 200;
+            Region nextRegion = null;
+            bool continueCurrent = true;
+            while (continueCurrent)
             {
-                length -= REGION / (MASS * 10);
-                // Dividing along the various cases for creating the wind movement. note that all movement are symetrical along the equatorial axis
-                if (stepCheck)
+                minTransit = 200;
+                nextRegion = null;
+                // Winds are following both temperature and relief, and tropical ones are looking for cold winds.
+                // It tends to go east when in in tropical or desertic area, west in temperate or polar area
+                // Note that we only count relief above a height of 10 because plains are not meant to stop winds, else these would stay on the ocean
+                foreach (Region region in wind.stream.Last().neighbors)
                 {
-                    if (wind.northern)
+                    if ((region.IsEastFrom(wind.stream.Last()) && (region.isTropical ||region.isDesert)) || (region.IsWestFrom(wind.stream.Last()) && (region.isTemperate || region.isPolar)))
                     {
-                        if (wind.coldWind && (region.isPolar || region.isTemperate))
-                        {
-                            windX++;
-                            windY++;
-                            direction = 1;
-                        }
-                        else if (wind.coldWind && (region.isTropical || region.isDesert))
-                        {
-                            windX--;
-                            windY++;
-                            direction = 2;
-                        }
-                        else if (!wind.coldWind && (region.isTropical || region.isDesert))
-                        {
-                            windX--;
-                            windY--;
-                            direction = 3;
-                        }
-                        else
-                        {
-                            windX++;
-                            windY--;
-                            direction = 4;
-                        }
+                        compareTransit = region.temperature + Math.Max(region.height, 10) - 30;
                     }
                     else
                     {
-                        if (wind.coldWind && (region.isPolar || region.isTemperate))
+                        compareTransit = region.temperature + Math.Max(region.height, 10) - 15;
+                    }
+                    if (compareTransit < minTransit)
+                    {
+                        nextRegion = region;
+                        minTransit = compareTransit;
+                    }
+                }
+                // if we found a valid region, we extend the wind flow
+                if (nextRegion != null && !wind.stream.Contains(nextRegion) && (compareTransit + 10) > (wind.stream.Last().temperature + Math.Min(wind.stream.Last().height, 10)) && length > 0)
+                {
+                    foreach (Region region in wind.stream.Last().neighbors)
+                    {
+                        // Wind carries himidity and temperature from the previous region, and alter height via erosion slightly downward
+                        // Desert winds are drier and warmer, polar wind are also dry, but cold, tropical winds are more humid
+                        region.calculateTemperature += dice.Next(3, 10) * (150 - Math.Abs(wind.stream.Last().temperature)) / 150;
+                        region.calculateHumidity += dice.Next(5, 13) * (100 - wind.stream.Last().humidity) / 100;
+                        region.calculateHeight -= dice.Next(1, 8) * region.height / 100;
+                        if (region.calculateHeight == 0)
                         {
-                            windX++;
-                            windY--;
-                            direction = 4;
+                            region.calculateHeight = 1;
                         }
-                        else if (wind.coldWind && (region.isTropical || region.isDesert))
+                        if (region.isPolar)
                         {
-                            windX--;
-                            windY--;
-                            direction = 3;
+                            region.calculateHumidity -= dice.Next(1, 6);
+                            region.calculateTemperature -= dice.Next(3, 10);
                         }
-                        else if (!wind.coldWind && (region.isTropical || region.isDesert))
+                        if (region.isDesert)
                         {
-                            windX--;
-                            windY++;
-                            direction = 2;
+                            region.calculateHumidity -= dice.Next(4, 10);
+                            region.calculateTemperature += dice.Next(1, 6);
                         }
-                        else
+                        if (region.isTropical)
                         {
-                            windX++;
-                            windY++;
-                            direction = 1;
+                            region.calculateHumidity += dice.Next(2, 8);
                         }
                     }
-                    stepCheck = false;
+                    wind.stream.Add(nextRegion);
+                    nextRegion.winds.Add(wind);
+                    length--;
                 }
                 else
                 {
-                    if (wind.northern)
+                    continueCurrent = false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Function creating cold winds
+        /// </summary>
+        /// <param name="wind"></param>
+        public void PropagateColdWind(Wind wind)
+        {
+            int length = dice.Next(6 * MASS / 9, 10 * MASS / 9);
+            int maxTransit;
+            int compareTransit = -200;
+            Region nextRegion = null;
+            bool continueCurrent = true;
+            while (continueCurrent)
+            {
+                maxTransit = -200;
+                nextRegion = null;
+                // Winds are following both temperature and relief, and tropical ones are looking for cold winds.
+                // It tends to go east when in in tropical or desertic area, west in temperate or polar area
+                // Note that we only count relief above a height of 10 because plains are not meant to stop winds, else these would stay on the ocean
+                foreach (Region region in wind.stream.Last().neighbors)
+                {
+                    if ((region.IsEastFrom(wind.stream.Last()) && (region.isTropical || region.isDesert)) || (region.IsWestFrom(wind.stream.Last()) && (region.isTemperate || region.isPolar)))
                     {
-                        if (region.isPolar)
-                        {
-                            windX++;
-                        }
-                        else if (region.isTropical)
-                        {
-                            windX--;
-                        }
-                        else if (wind.coldWind)
-                        {
-                            windY++;
-                        }
-                        else
-                        {
-                            windY--;
-                        }
+                        compareTransit = region.temperature + Math.Max(region.height, 10) + 30;
                     }
                     else
                     {
+                        compareTransit = region.temperature + Math.Max(region.height, 10) + 15;
+                    }
+                    if (compareTransit > maxTransit)
+                    {
+                        nextRegion = region;
+                        maxTransit = compareTransit;
+                    }
+                }
+                // if we found a valid region, we extend the wind flow
+                if (nextRegion != null && !wind.stream.Contains(nextRegion) && (compareTransit + 10) > (wind.stream.Last().temperature + Math.Min(wind.stream.Last().height, 10)) && length > 0)
+                {
+                    foreach (Region region in wind.stream.Last().neighbors)
+                    {
+                        // Wind carries himidity and temperature from the previous region, and alter height via erosion slightly downward
+                        // Desert winds are drier and warmer, polar wind are also dry, but cold, tropical winds are more humid
+                        region.calculateTemperature += dice.Next(4, 12) * (150 - Math.Abs(wind.stream.Last().temperature)) / 150;
+                        region.calculateHumidity += dice.Next(3, 9) * (100 - wind.stream.Last().humidity) / 100;
+                        region.calculateHeight -= dice.Next(1, 8) * region.height / 100;
+                        if (region.calculateHeight == 0)
+                        {
+                            region.calculateHeight = 1;
+                        }
                         if (region.isPolar)
                         {
-                            windX++;
+                            region.calculateHumidity -= dice.Next(1, 6);
+                            region.calculateTemperature -= dice.Next(3, 10);
                         }
-                        else if (region.isTropical)
+                        if (region.isDesert)
                         {
-                            windX--;
+                            region.calculateHumidity -= dice.Next(4, 10);
+                            region.calculateTemperature += dice.Next(1, 6);
                         }
-                        else if (wind.coldWind)
+                        if (region.isTropical)
                         {
-                            windY--;
-                        }
-                        else
-                        {
-                            windY++;
+                            region.calculateHumidity += dice.Next(2, 8);
                         }
                     }
-                    stepCheck = true;
+                    wind.stream.Add(nextRegion);
+                    nextRegion.winds.Add(wind);
+                    length--;
                 }
-                // Adjusting the detection coordinate for these to not exit the map's boundaries
-                if (windX < 0)
+                else
                 {
-                    windX += LONGITUDE;
+                    continueCurrent = false;
                 }
-                if (windX >= LONGITUDE)
-                {
-                    windX -= LONGITUDE;
-                }
-                // Slight optimization, we only do the following if we get in a new region
-                if (region.ID != mapMask[windX, windY])
-                {
-                    // In the case we meet a mountain, the wind is stopped, but a new one is generated a little on the side.
-                    // If the new starting area meets another mountain right at generation, it stops, else, the wind continue its course normally
-                    if (regionList[mapMask[windX, windY]].isMountain)
-                    {
-                        switch (direction)
-                        {
-                            case 1:
-                                if (wind.northern)
-                                {
-                                    if (windY < 5)
-                                    {
-                                        stopWind = true;
-                                    }
-                                }
-                                else
-                                {
-                                    if (windY < (LATITUDE / 2) - 5)
-                                    {
-                                        wind.northern = true;
-                                        direction = 3;
-                                    }
-                                }
-                                windX += 5;
-                                windY -= 5;
-                                if (windX >= LONGITUDE)
-                                {
-                                    windX -= LONGITUDE;
-                                }
-                                if (windY < 0)
-                                {
-                                    windY = 0;
-                                }
-                                if (regionList[mapMask[windX, windY]].isMountain)
-                                {
-                                    stopWind = true;
-                                }
-                                else
-                                {
-                                    length -= 7 * MASS;
-                                }
-                                break;
-                            case 2:
-                                if (!wind.northern)
-                                {
-                                    if (windY > LATITUDE - 6)
-                                    {
-                                        stopWind = true;
-                                    }
-                                }
-                                else
-                                {
-                                    if (windY > (LATITUDE / 2) - 5)
-                                    {
-                                        wind.northern = false;
-                                        direction = 2;
-                                    }
-                                }
-                                windX += 5;
-                                windY += 5;
-                                if (windX >= LONGITUDE)
-                                {
-                                    windX -= LONGITUDE;
-                                }
-                                if (windY >= LATITUDE)
-                                {
-                                    windY = LATITUDE - 1;
-                                }
-                                if (regionList[mapMask[windX, windY]].isMountain)
-                                {
-                                    stopWind = true;
-                                }
-                                else
-                                {
-                                    length -= 7 * MASS;
-                                }
-                                break;
-                            case 3:
-                                if (!wind.northern)
-                                {
-                                    if (windY > LATITUDE - 6)
-                                    {
-                                        stopWind = true;
-                                    }
-                                }
-                                else
-                                {
-                                    if (windY > (LATITUDE / 2) - 5)
-                                    {
-                                        wind.northern = false;
-                                        direction = 1;
-                                    }
-                                }
-                                windX -= 5;
-                                windY += 5;
-                                if (windX < 0)
-                                {
-                                    windX += LONGITUDE;
-                                }
-                                if (windY >= LATITUDE)
-                                {
-                                    windY = LATITUDE - 1;
-                                }
-                                if (regionList[mapMask[windX, windY]].isMountain)
-                                {
-                                    stopWind = true;
-                                }
-                                else
-                                {
-                                    length -= 7 * MASS;
-                                }
-                                break;
-                            case 4:
-                                if (wind.northern)
-                                {
-                                    if (windY < 5)
-                                    {
-                                        stopWind = true;
-                                    }
-                                }
-                                else
-                                {
-                                    if (windY < (LATITUDE / 2) - 5)
-                                    {
-                                        wind.northern = true;
-                                        direction = 4;
-                                    }
-                                }
-                                windX -= 5;
-                                windY -= 5;
-                                if (windX < 0)
-                                {
-                                    windX += LONGITUDE;
-                                }
-                                if (windY < 0)
-                                {
-                                    windY = 0;
-                                }
-                                if (regionList[mapMask[windX, windY]].isMountain)
-                                {
-                                    stopWind = true;
-                                }
-                                else
-                                {
-                                    length -= 7 * MASS;
-                                }
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    if (!stopWind)
-                    {
-                        previousHumidity = region.humidity;
-                        previousTemperature = region.temperature;
-                        region = regionList[mapMask[windX, windY]];
-                        // Not adding a wind that is already present
-                        if (!wind.stream.Contains(region))
-                        {
-                            wind.stream.Add(region);
-                            region.winds.Add(wind);
-                            // We modify the temperature and humidity of the region but also its neighbors
-                            if (wind.coldWind)
-                            {
-                                region.temperature -= dice.Next(6, 10) * (100 - Math.Abs(region.temperature)) / 100;
-                            }
-                            else
-                            {
-                                region.temperature += dice.Next(6, 10) * (100 - Math.Abs(region.temperature)) / 100;
-                            }
-                            region.humidity = (region.humidity * 2 + previousHumidity) / 3;
-                            region.temperature = (region.temperature * 2 + previousTemperature) / 3;
-                            foreach (Region neighbor in region.neighbors)
-                            {
-                                neighbor.humidity = (neighbor.humidity * 3 + previousHumidity) / 4;
-                                neighbor.temperature = (neighbor.temperature * 3 + previousTemperature) / 4;
-                            }
-                        }
-                    }
-                }
-
             }
-
         }
 
         /// <summary>
@@ -2211,7 +2178,7 @@ namespace UniversalysWorldGenerator
             int numberWaterCurrent;
             bool cold = true;
 
-            numberWaterCurrent = dice.Next(REGION / 150, REGION / 120);
+            numberWaterCurrent = dice.Next(7 * MASS / 10, 11 * MASS / 10);
 
             while (numberWaterCurrent != 0)
             {
@@ -2265,7 +2232,7 @@ namespace UniversalysWorldGenerator
                 // Warm currents are coming from the tropics and slides to the poles. They tend to go east slightly
                 foreach (Region region in waterCurrent.stream.Last().neighbors)
                 {
-                    if (region.IsWater())
+                    if (region.IsWater() || region.isSmallIsland)
                     {
                         if (region.IsEastFrom(waterCurrent.stream.Last()))
                         {
@@ -2283,12 +2250,12 @@ namespace UniversalysWorldGenerator
                     }
                 }
                 // if we found a valid region, we extend the water current
-                if (nextRegion != null && !waterCurrent.stream.Contains(nextRegion) && compareTemperature < waterCurrent.stream.Last().temperature)
+                if (nextRegion != null && !waterCurrent.stream.Contains(nextRegion) && (compareTemperature - 5) < waterCurrent.stream.Last().temperature)
                 {
                     foreach (Region region in waterCurrent.stream.Last().neighbors)
                     {
-                        region.temperature += dice.Next(4, 11) * (100 - Math.Abs(region.temperature)) / 100;
-                        region.humidity += dice.Next(4, 11) * (100 - region.humidity) / 100;
+                        region.calculateTemperature += dice.Next(4, 11) * (100 - Math.Abs(region.temperature)) / 100;
+                        region.calculateHumidity += dice.Next(4, 11) * (100 - region.humidity) / 100;
                     }
                     waterCurrent.stream.Add(nextRegion);
                     nextRegion.waterCurrents.Add(waterCurrent);
@@ -2336,12 +2303,12 @@ namespace UniversalysWorldGenerator
                     }
                 }
                 // if we found a valid region, we extend the water current
-                if (nextRegion != null && !waterCurrent.stream.Contains(nextRegion) && compareTemperature > waterCurrent.stream.Last().temperature)
+                if (nextRegion != null && !waterCurrent.stream.Contains(nextRegion) && (compareTemperature + 5) > waterCurrent.stream.Last().temperature)
                 {
                     foreach (Region region in waterCurrent.stream.Last().neighbors)
                     {
-                        region.temperature -= dice.Next(4, 11) * (100 - Math.Abs(region.temperature)) / 100;
-                        region.humidity += dice.Next(4, 11) * (100 - region.humidity) / 100;
+                        region.calculateTemperature -= dice.Next(4, 11) * (100 - Math.Abs(region.temperature)) / 100;
+                        region.calculateHumidity += dice.Next(4, 11) * (100 - region.humidity) / 100;
                     }
                     waterCurrent.stream.Add(nextRegion);
                     nextRegion.waterCurrents.Add(waterCurrent);
@@ -2352,6 +2319,44 @@ namespace UniversalysWorldGenerator
                 }
             }
 
+        }
+
+        #endregion
+
+        #region CleanUp
+
+        public void ApplyMapChange()
+        {
+            foreach (Region region in regionList)
+            {
+                region.humidity = region.calculateHumidity;
+                region.temperature = region.calculateTemperature;
+                region.height = region.calculateHeight;
+                if (region.isSea && region.height >= 0)
+                {
+                    region.height = -1;
+                }
+                if (!region.isSea && !region.isOcean && region.height <= 0)
+                {
+                    region.height = 1;
+                }
+                if (region.humidity > 100)
+                {
+                    region.humidity = 100;
+                }
+                if (region.humidity < 0)
+                {
+                    region.humidity = 0;
+                }
+                if (region.temperature > 100)
+                {
+                    region.temperature = 100;
+                }
+                if (region.temperature < -100)
+                {
+                    region.temperature = -100;
+                }
+            }
         }
 
         #endregion
@@ -2825,7 +2830,18 @@ namespace UniversalysWorldGenerator
 
             result += "ID REGION : " + regionList[IDregion].ID.ToString() + Environment.NewLine;
 
-            result += "CONTINENT ID : " + regionList[IDregion].generationOrder.ToString() + Environment.NewLine;
+            if (regionList[IDregion].continentID > 0)
+            {
+                result += "CONTINENT ID : " + regionList[IDregion].continentID.ToString() + Environment.NewLine;
+            }
+            else if (regionList[IDregion].continentID < 0)
+            {
+                result += "OPEN SEA ID : " + regionList[IDregion].continentID.ToString() + Environment.NewLine;
+            }
+            else
+            {
+                result += "NO CONTINENT ASSIGNED" + Environment.NewLine;
+            }
 
             result += "REGION HEIGHT : " + regionList[IDregion].height.ToString() + Environment.NewLine;
 
@@ -2836,65 +2852,57 @@ namespace UniversalysWorldGenerator
             #region Boolean
             if (regionList[IDregion].isSea)
             {
-                result += "Sea : " + regionList[IDregion].isSea.ToString() + Environment.NewLine;
+                result += "Sea" + Environment.NewLine;
             }
             if (regionList[IDregion].isMountain)
             {
-                result += "Mountain Range : " + regionList[IDregion].isMountain.ToString() + Environment.NewLine;
+                result += "Mountain Range" + Environment.NewLine;
             }
             if (regionList[IDregion].isOcean)
             {
-                result += "Ocean : " + regionList[IDregion].isOcean.ToString() + Environment.NewLine;
+                result += "Ocean" + Environment.NewLine;
             }
             if (regionList[IDregion].isHilly)
             {
-                result += "Hill : " + regionList[IDregion].isHilly.ToString() + Environment.NewLine;
+                result += "Hill" + Environment.NewLine;
+            }
+            if (regionList[IDregion].isHilly)
+            {
+                result += "Valley" + Environment.NewLine;
             }
             if (regionList[IDregion].isLargeIsland)
             {
-                result += "Large Island : " + regionList[IDregion].isLargeIsland.ToString() + Environment.NewLine;
+                result += "Large Island" + Environment.NewLine;
             }
             if (regionList[IDregion].isOceanTrench)
             {
-                result += "Deep Ocean Trench : " + regionList[IDregion].isOceanTrench.ToString() + Environment.NewLine;
-            }
-            if (regionList[IDregion].isContinent)
-            {
-                result += "Continent : " + regionList[IDregion].isContinent.ToString() + Environment.NewLine;
+                result += "Deep Ocean Trench" + Environment.NewLine;
             }
             if (regionList[IDregion].isSmallIsland)
             {
-                result += "Small island : " + regionList[IDregion].isSmallIsland.ToString() + Environment.NewLine;
+                result += "Small island" + Environment.NewLine;
             }
 
             if (regionList[IDregion].isPolar)
             {
-                result += "Polar : " + regionList[IDregion].isPolar.ToString() + Environment.NewLine;
+                result += "Polar" + Environment.NewLine;
             }
             if (regionList[IDregion].isTemperate)
             {
-                result += "Temperate : " + regionList[IDregion].isTemperate.ToString() + Environment.NewLine;
+                result += "Temperate" + Environment.NewLine;
             }
             if (regionList[IDregion].isDesert)
             {
-                result += "Desert : " + regionList[IDregion].isDesert.ToString() + Environment.NewLine;
+                result += "Desert" + Environment.NewLine;
             }
             if (regionList[IDregion].isTropical)
             {
-                result += "Tropical : " + regionList[IDregion].isTropical.ToString() + Environment.NewLine;
+                result += "Tropical" + Environment.NewLine;
             }
-            if (regionList[IDregion].rivers.Count > 0)
-            {
-                result += "River : " + regionList[IDregion].rivers.Count.ToString() + Environment.NewLine;
-            }
-            if (regionList[IDregion].winds.Count > 0)
-            {
-                result += "Wind : " + regionList[IDregion].winds.Count.ToString() + Environment.NewLine;
-            }
-            //if (regionList[IDregion].hasMarineStream)
-            //{
-            //    result += "Marine Stream : " + regionList[IDregion].hasMarineStream.ToString() + Environment.NewLine;
-            //}
+            result += "Number of rivers : " + regionList[IDregion].rivers.Count.ToString() + Environment.NewLine;
+            result += "Number of winds : " + regionList[IDregion].winds.Count.ToString() + Environment.NewLine;
+            result += "Marine Stream : " + regionList[IDregion].waterCurrents.Count.ToString() + Environment.NewLine;
+
             #endregion
             foreach (var item in regionList[IDregion].naturalResource.resources)
             {
@@ -3234,6 +3242,29 @@ namespace UniversalysWorldGenerator
         /// <summary>
         /// Shows the regions generated by the landmass creation
         /// </summary>
+        public void DrawLandmassMap()
+        {
+            int i = 0, j = 0, colorRed = 0, colorGreen = 0, colorBlue = 0;
+            while (i < LONGITUDE)
+            {
+                j = 0;
+                while (j < LATITUDE)
+                {
+                    colorRed = (25 * regionList[mapMask[i, j]].generationOrder) % 255;
+                    colorGreen = 50 * (regionList[mapMask[i, j]].generationOrder / 10) % 255;
+                    colorBlue = 0;
+
+                    mapPaint.SetPixel(i, j, Color.FromArgb(colorRed, colorGreen, colorBlue));
+                    j++;
+                }
+                i++;
+            }
+            mapPaint.Save(Program.filePath + "mapLandmass.png");
+        }
+
+        /// <summary>
+        /// Gives a graphical display of the continents
+        /// </summary>
         public void DrawContinentMap()
         {
             int i = 0, j = 0, colorRed = 0, colorGreen = 0, colorBlue = 0;
@@ -3242,11 +3273,24 @@ namespace UniversalysWorldGenerator
                 j = 0;
                 while (j < LATITUDE)
                 {
-                    // Painting the map, brown to white for continents, green blue to deep blue for water
-
-                    colorRed = (25 * regionList[mapMask[i, j]].generationOrder) % 255;
-                    colorGreen = 50 * (regionList[mapMask[i, j]].generationOrder / 10) % 255;
-                    colorBlue = 0;
+                    if (regionList[mapMask[i, j]].continentID > 0)
+                    {
+                        colorRed = 100 + (15 * regionList[mapMask[i, j]].continentID) % 155;
+                        colorGreen = 80 + (2 * regionList[mapMask[i, j]].continentID) % 175;
+                        colorBlue = 0;
+                    }
+                    else if (regionList[mapMask[i, j]].continentID < 0)
+                    {
+                        colorRed = 0;
+                        colorGreen = 50 - (2 * regionList[mapMask[i, j]].continentID) % 205;
+                        colorBlue = 100 - (15 * regionList[mapMask[i, j]].continentID) % 155;
+                    }
+                    else
+                    {
+                        colorRed = 30;
+                        colorGreen = 30;
+                        colorBlue = 30;
+                    }
 
 
                     mapPaint.SetPixel(i, j, Color.FromArgb(colorRed, colorGreen, colorBlue));

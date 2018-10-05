@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-//TODO : STOCK ALL GEOLOGIES IN DATABASE
 namespace UniversalysWorldGenerator
 {
     class Region
@@ -17,7 +16,7 @@ namespace UniversalysWorldGenerator
         public List<Region> neighbors = new List<Region>();
         public bool isMountain = false, isValley = false, isHilly = false, isVolcano;
         public bool isSea = false, isOceanTrench = false, isOcean = false;
-        public bool isContinent = false, isLargeIsland = false, isSmallIsland = false;
+        public bool isContinent = false, isLargeIsland = false, isSmallIsland = false, isOpenSea = false;
         public bool isPolar = false, isTropical = false, isTemperate = false, isDesert = false;
         public List<Geology> geology = new List<Geology>();
         public List<River> rivers = new List<River>();

@@ -53,9 +53,9 @@
             // 
             // InformationDisplay
             // 
-            this.InformationDisplay.Location = new System.Drawing.Point(1306, 12);
+            this.InformationDisplay.Location = new System.Drawing.Point(1315, 12);
             this.InformationDisplay.Name = "InformationDisplay";
-            this.InformationDisplay.Size = new System.Drawing.Size(212, 543);
+            this.InformationDisplay.Size = new System.Drawing.Size(203, 474);
             this.InformationDisplay.TabIndex = 1;
             this.InformationDisplay.Text = "";
             // 
@@ -71,7 +71,7 @@
             // 
             // btnClear
             // 
-            this.btnClear.Location = new System.Drawing.Point(1422, 560);
+            this.btnClear.Location = new System.Drawing.Point(1422, 491);
             this.btnClear.Margin = new System.Windows.Forms.Padding(2);
             this.btnClear.Name = "btnClear";
             this.btnClear.Size = new System.Drawing.Size(96, 33);
